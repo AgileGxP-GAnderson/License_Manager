@@ -5,6 +5,8 @@ import { Op } from 'sequelize'; // Import Op if needed for search/filtering
 // Handler for GET /api/customers (Get all customers)
 // Also handles GET /api/customers?businessName=... (Search)
 export async function GET(request: NextRequest) {
+  console.log('API Hit getCustomers!');
+  debugger;
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
     const searchParams = request.nextUrl.searchParams;

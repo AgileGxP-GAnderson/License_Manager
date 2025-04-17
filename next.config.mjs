@@ -13,6 +13,7 @@ try {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  productionBrowserSourceMaps: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -27,6 +28,31 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
+
+  webpack: (config, { isServer }) => {
+    // Handle Sequelize's dynamic imports
+    if (isServer) {
+      // For server-side, mark pg modules as external
+      config.externals = [
+        ...(config.externals || []), 
+        'pg', 
+        'pg-hstore'
+      ];
+    } else {
+      // For client-side, ensure these modules are properly handled
+      config.resolve = {
+        ...config.resolve,
+        fallback: {
+          ...config.resolve?.fallback,
+          pg: false,
+          'pg-hstore': false,
+          fs: false,
+          path: false,
+        }
+      };
+    }
+    return config;
+  }
 }
 
 if (userConfig) {

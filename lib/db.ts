@@ -1,5 +1,6 @@
 import { Sequelize, Dialect, DataTypes, Model } from 'sequelize'; // Import Model
 import dotenv from 'dotenv';
+import { dialectModules } from './sequelize-dialects';
 
 // Import model CLASSES (keep these at top level for type usage)
 import Administrator from './models/administrator';
@@ -59,6 +60,7 @@ function initializeDb(): Db {
     host: dbHost,
     port: dbPort,
     dialect: dbDialect,
+    dialectModule: dialectModules[dbDialect as keyof typeof dialectModules],
     logging: process.env.NODE_ENV === 'development' ? console.log : false, // Consider disabling logging during build
     dialectOptions: dbSslMode ? {
       ssl: {

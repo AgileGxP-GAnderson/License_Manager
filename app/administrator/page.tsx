@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Search } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import { useStore } from "@/lib/store"
 import CustomerDetails from "@/components/customer-details"
 import PurchaseOrderList from "@/components/purchase-order-list"
 import PurchaseOrderForm from "@/components/purchase-order-form"
+import { debounce } from "lodash" // You may need to install this
 
 export default function AdministratorPage() {
   // Get store state and subscribe to changes
@@ -21,14 +22,53 @@ export default function AdministratorPage() {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showAddPurchaseOrder, setShowAddPurchaseOrder] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSearch = () => {
-    setSearchError("Not implemented")
-    if (searchQuery.trim()) {
-      const results = searchCustomers(searchQuery)
-      setSearchResults(results)
+  // Function to fetch customers from API
+  const fetchCustomers = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
     }
-  }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/customers?businessName=${encodeURIComponent(query)}`);
+      if (!response.ok) throw new Error('Failed to fetch customers');
+      
+      const data = await response.json();
+      setSearchResults(data);
+      setSearchError(null);
+    } catch (error) {
+      console.error('Error searching customers:', error);
+      setSearchError("Failed to search customers");
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Create debounced version of search function
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      fetchCustomers(query);
+    }, 300),
+    [fetchCustomers]
+  );
+
+  // Trigger search when search query changes
+  useEffect(() => {
+    if (searchQuery.trim().length >= 2) {
+      debouncedSearch(searchQuery);
+    } else {
+      setSearchResults([]);
+    }
+    
+    // Cleanup function
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [searchQuery, debouncedSearch]);
 
   const handleSelectCustomer = (customer: any) => {
     setCurrentCustomer(customer.id)
@@ -61,9 +101,9 @@ export default function AdministratorPage() {
         <CardContent className="pt-6">
           <div className="flex items-center mb-6">
             <div className="flex items-center space-x-2 flex-1">
-              <div className="flex-1 max-w-sm">
+              <div className="flex-1 max-w-sm relative">
                 <Input
-                  placeholder="Search customers..."
+                  placeholder="Type to search customers..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value)
@@ -71,10 +111,12 @@ export default function AdministratorPage() {
                   }}
                   className="border-brand-purple/20 focus-visible:ring-brand-purple/30"
                 />
+                {isLoading && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin h-4 w-4 border-2 border-brand-purple border-opacity-50 border-t-brand-purple rounded-full"></div>
+                  </div>
+                )}
               </div>
-              <Button variant="outline" onClick={handleSearch} className="micro-interaction">
-                <Search className="h-4 w-4 mr-2" /> Search
-              </Button>
               {searchError && <span className="text-red-500 ml-2">{searchError}</span>}
             </div>
           </div>
@@ -88,7 +130,7 @@ export default function AdministratorPage() {
                     key={customer.id}
                     className="flex items-center justify-between p-2 hover:bg-brand-purple/5 rounded-md transition-colors"
                   >
-                    <span>{customer.name}</span>
+                    <span>{customer.businessName || customer.name}</span>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -100,6 +142,12 @@ export default function AdministratorPage() {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {searchQuery.trim().length >= 2 && !isLoading && searchResults.length === 0 && (
+            <div className="mb-6 border rounded-md p-4 border-brand-purple/20 bg-brand-purple/5">
+              <p className="text-center text-muted-foreground">No customers found matching "{searchQuery}"</p>
             </div>
           )}
 
