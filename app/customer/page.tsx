@@ -193,7 +193,7 @@ export default function CustomerPortal() {
   }
 
   const hasActivatedLicenses = () => {
-    return purchaseOrders.some((po) => po.licenses.some((license) => license.status === "Activated"))
+    return purchaseOrders.some((po) => po.licenses.some((license: { status: string }) => license.status === "Activated"))
   }
 
   // --- Render Logic ---
@@ -223,7 +223,7 @@ export default function CustomerPortal() {
         {customer ? (
           <div className="mt-2 p-3 border rounded bg-brand-purple/5 border-brand-purple/20">
             <p className="text-lg">
-              Current Customer: <span className="font-semibold">{customer.businessName || customer.name}</span>
+              Current Customer: <span className="font-semibold">{customer.businessName}</span>
             </p>
           </div>
         ) : (

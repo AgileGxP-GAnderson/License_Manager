@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
+      console.log('[API_PURCHASE_ORDERS_POST] Request body:', request.body); // Log the request body for debugging
         const body: PurchaseOrderInput = await request.json();
         const { poName, purchaseDate, customerId, isClosed } = body;
 

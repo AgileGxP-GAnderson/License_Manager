@@ -48,7 +48,7 @@ export const useStore = create<StoreState>()(
         const { customers } = get()
         const lowerQuery = query.toLowerCase()
         return customers.filter(
-          (c) => c.name.toLowerCase().includes(lowerQuery) || c.email.toLowerCase().includes(lowerQuery),
+          (c) => c.businessName.toLowerCase().includes(lowerQuery) || (c.contactEmail ?? "").toLowerCase().includes(lowerQuery),
         )
       },
 
@@ -58,6 +58,7 @@ export const useStore = create<StoreState>()(
       },
 
       addPurchaseOrder: (customerId, po) => {
+        console.log("Adding purchase order in store:", po);
         const id = uuidv4()
         set((state) => ({
           purchaseOrders: [

@@ -67,7 +67,9 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
   })
 
   const onSubmit = async (data: FormValues) => {
+    console.log("Hit onSubmit with data:", data);
     setIsSubmitting(true)
+    setPoNumberError(null); // Clear previous error
 
     // Validate PO Number uniqueness
     if (!isPONumberUnique(data.poNumber)) {
@@ -77,6 +79,7 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
     }
 
     try {
+      // Call the store action which should handle the API call
       addPurchaseOrder(customerId, {
         poNumber: data.poNumber,
         purchaseDate: data.purchaseDate,
@@ -87,9 +90,10 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
           expirationDate: license.duration === "Perpetual" ? null : license.expirationDate,
         })),
       })
-      onSuccess()
+      onSuccess() // Call the success callback passed via props
     } catch (error) {
       console.error("Failed to add purchase order:", error)
+      // Optionally: Set a general form error state here to display to the user
     } finally {
       setIsSubmitting(false)
     }
@@ -157,7 +161,7 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                    <Calendar selected={field.value} onSelect={field.onChange} />
                   </PopoverContent>
                 </Popover>
                 <FormMessage />
@@ -205,7 +209,9 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          {/* Assuming '1' corresponds to 'Agile Engine' */}
                           <SelectItem value="1">Agile Engine</SelectItem>
+                          {/* Add other license types here if applicable */}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -219,6 +225,7 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
+                      {/* Status is likely determined by logic, not user input on creation */}
                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={true}>
                         <FormControl>
                           <SelectTrigger>
@@ -268,6 +275,7 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Activation Date</FormLabel>
+                      {/* Activation date is likely set later, not on creation */}
                       <Popover>
                         <PopoverTrigger asChild disabled>
                           <FormControl>
@@ -285,7 +293,8 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                          {/* Calendar might not be needed here if disabled */}
+                          <Calendar selected={field.value} onSelect={field.onChange} />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -293,6 +302,7 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                   )}
                 />
 
+                {/* Conditionally render Expiration Date based on Duration */}
                 {form.watch(`licenses.${index}.duration`) !== "Perpetual" && (
                   <FormField
                     control={form.control}
@@ -300,6 +310,7 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Expiration Date</FormLabel>
+                        {/* Expiration date is likely calculated/set later, not on creation */}
                         <Popover>
                           <PopoverTrigger asChild disabled>
                             <FormControl>
@@ -317,7 +328,8 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                             </FormControl>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            {/* Calendar might not be needed here if disabled */}
+                            <Calendar selected={field.value} onSelect={field.onChange}  />
                           </PopoverContent>
                         </Popover>
                         <FormMessage />
@@ -335,7 +347,7 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting || fields.length === 0}>
-            Save All
+            {isSubmitting ? "Saving..." : "Save Purchase Order"} {/* Changed button text */}
           </Button>
         </div>
       </form>

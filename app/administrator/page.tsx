@@ -38,7 +38,7 @@ export default function AdministratorPage() {
       const customerFromStore = customers.find(c => c.id === id);
       if (customerFromStore) {
         // Ensure store version has all details, otherwise fetch anyway
-        if (customerFromStore.email && customerFromStore.addressLine1) { // Check for essential details
+        if (customerFromStore.contactEmail && customerFromStore.businessAddress1) { // Check for essential details
            setSelectedCustomerData(customerFromStore);
            setIsInitialLoading(false);
            return;
@@ -127,7 +127,7 @@ export default function AdministratorPage() {
     setSearchError(null);
 
     // 4. Check if we already have full details (e.g., email, address)
-    if (customerFromSearch.email && customerFromSearch.addressLine1) {
+    if (customerFromSearch.contactEmail && customerFromSearch.businessAddress1) {
       console.log("Search result already has full details.");
       return; // No need to fetch again
     }
@@ -184,7 +184,7 @@ export default function AdministratorPage() {
           ) : customerToDisplay ? (
             <div className="mt-2 p-3 border rounded bg-brand-purple/5 border-brand-purple/20">
               <p className="text-lg">
-                Current Customer: <span className="font-semibold">{customerToDisplay.businessName || customerToDisplay.name}</span>
+                Current Customer: <span className="font-semibold">{customerToDisplay.businessName || customerToDisplay.businessName}</span>
               </p>
             </div>
           ) : (
@@ -229,7 +229,7 @@ export default function AdministratorPage() {
                     key={customer.id}
                     className="flex items-center justify-between p-2 hover:bg-brand-purple/5 rounded-md transition-colors"
                   >
-                    <span>{customer.businessName || customer.name}</span>
+                    <span>{customer.businessName || customer.contactName}</span>
                     <Button
                       variant="ghost"
                       size="sm"

@@ -31,7 +31,14 @@ function Calendar({
     <div className={cn("p-3", className)}>
       <DatePicker
         selected={value}
-        onChange={(date) => onChange?.(date)}
+        onChange={(date, event) => {
+          if (Array.isArray(date)) {
+            const [start, end] = date;
+            onChange?.(start); 
+          } else {
+            onChange?.(date);
+          }
+        }}
         locale="en-US"
         inline
         calendarClassName="border-none shadow-none"
