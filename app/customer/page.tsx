@@ -1,10 +1,10 @@
-"use client"
+"use client"; // Ensure this is a Client Component
 
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
-import { useStore } from "@/lib/store"
+import { useState, useEffect } from "react";
+import { useStore } from "@/lib/store"; // Import your Zustand store
+import { Card, CardContent } from "@/components/ui/card"; // Assuming you use shadcn/ui
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { CardHeader, CardTitle } from "@/components/ui/card"
 import { format } from "date-fns"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -15,26 +15,44 @@ import LicenseDownloadModal from "@/components/license-download-modal"
 import LicenseDeactivationModal from "@/components/license-deactivation-modal"
 import Link from "next/link"
 
-export default function CustomerPortal() {
-  const searchParams = useSearchParams()
-  const idFromUrl = searchParams.get("id")
+// Define Customer type (if not already imported/shared)
+interface Customer {
+  id: string;
+  name: string;
+  businessName?: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+}
 
+// Define types for Purchase Orders and Servers if needed
+// interface PurchaseOrder { ... }
+// interface Server { ... }
+
+export default function CustomerPortal() {
+  // 1. Get the currentCustomerId from the store
   const {
-    customers,
     currentCustomerId,
+    customers,
     getPurchaseOrdersByCustomerId,
     getServersByCustomerId,
     addServer,
     getServerById,
     updateLicense,
-  } = useStore()
+  } = useStore();
 
-  // Use either the ID from URL or the current customer ID from the store
-  const customerId = idFromUrl || currentCustomerId
+  // 2. State to hold the actual customer data
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Start loading until we confirm customer status
+  const [error, setError] = useState<string | null>(null);
 
-  // Find the customer
-  const customer = customerId ? customers.find((c) => c.id === customerId) : null
-
+  // State for other data like purchase orders, servers, modals
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([])
   const [servers, setServers] = useState<any[]>([])
   const [serverRegistrationModal, setServerRegistrationModal] = useState(false)
@@ -46,6 +64,67 @@ export default function CustomerPortal() {
   const [licenseDownloadModal, setLicenseDownloadModal] = useState(false)
   const [licenseDeactivationModal, setLicenseDeactivationModal] = useState(false)
   const [activatedLicenses, setActivatedLicenses] = useState<Record<string, boolean>>({})
+
+  // 3. useEffect to fetch customer details when currentCustomerId is available
+  useEffect(() => {
+    // Function to fetch customer details
+    const fetchCustomerDetails = async (id: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Option A: Try getting from store first (if store holds full customer list)
+        const customerFromStore = customers.find((c) => c.id === id); // Use your store's getter if available
+        if (customerFromStore) {
+          setCustomer(customerFromStore);
+          setIsLoading(false);
+          return;
+        }
+
+        // Option B: Fetch from API if not in store or store doesn't hold full list
+        const response = await fetch(`/api/customers/${id}`); // Assuming you have an API route like /api/customers/[id]
+        if (!response.ok) {
+          throw new Error("Failed to fetch customer details.");
+        }
+        const data: Customer = await response.json();
+        setCustomer(data);
+
+      } catch (err: any) {
+        console.error("Error fetching customer:", err);
+        setError(err.message || "Could not load customer data.");
+        setCustomer(null); // Clear customer data on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Check if currentCustomerId exists (it might be null initially or after clearing)
+    if (currentCustomerId) {
+      fetchCustomerDetails(currentCustomerId);
+    } else {
+      // No customer selected in the store
+      setCustomer(null);
+      setIsLoading(false); // Stop loading, as there's no customer to load
+      // Optionally clear other related state like purchase orders, servers
+      setPurchaseOrders([]);
+      setServers([]);
+    }
+
+    // Dependency array: Re-run when currentCustomerId changes
+  }, [currentCustomerId, customers]); // Add store getters if used
+
+  // --- Your existing useEffects for loading POs, Servers, etc. ---
+  // Make sure they depend on `customer?.id` or `currentCustomerId`
+  useEffect(() => {
+    if (customer?.id) { // Use the fetched customer's ID
+      const orders = getPurchaseOrdersByCustomerId(customer.id);
+      setPurchaseOrders(orders);
+      const customerServers = getServersByCustomerId(customer.id);
+      setServers(customerServers);
+    } else {
+      setPurchaseOrders([]); // Clear if no customer
+      setServers([]);
+    }
+  }, [customer, getPurchaseOrdersByCustomerId, getServersByCustomerId]);
 
   const openServerSelectionModal = (poId: string, licenseIndex: number) => {
     setServerSelectionModal({
@@ -64,16 +143,16 @@ export default function CustomerPortal() {
   }
 
   const handleServerRegistration = (name: string, fingerprint: string) => {
-    if (customerId) {
+    if (customer?.id) {
       addServer({
-        customerId,
+        customerId: customer.id,
         name,
         fingerprint,
       })
 
       // Refresh the servers list
-      if (customerId) {
-        setServers(getServersByCustomerId(customerId))
+      if (customer.id) {
+        setServers(getServersByCustomerId(customer.id))
       }
     }
   }
@@ -128,49 +207,47 @@ export default function CustomerPortal() {
     }
   }
 
-  // Load purchase orders and servers when customer changes
-  useEffect(() => {
-    if (customerId) {
-      const orders = getPurchaseOrdersByCustomerId(customerId)
-      setPurchaseOrders(orders)
-
-      const customerServers = getServersByCustomerId(customerId)
-      setServers(customerServers)
-    }
-  }, [customerId, getPurchaseOrdersByCustomerId, getServersByCustomerId])
-
   const hasActivatedLicenses = () => {
     return purchaseOrders.some((po) => po.licenses.some((license) => license.status === "Activated"))
+  }
+
+  // --- Render Logic ---
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6 text-center">
+        <p>Loading customer data...</p>
+        {/* Optional: Add a spinner */}
+      </div>
+    );
+  }
+
+  if (error) {
+     return (
+      <div className="container mx-auto py-6 text-center text-red-600">
+        <p>Error: {error}</p>
+      </div>
+    );
   }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-brand-purple">License Manager - Customer Portal</h1>
-        {customer && (
+        {/* Display customer info if loaded */}
+        {customer ? (
           <div className="mt-2 p-3 border rounded bg-brand-purple/5 border-brand-purple/20">
             <p className="text-lg">
-              Current Customer: <span className="font-semibold">{customer.name}</span>
+              Current Customer: <span className="font-semibold">{customer.businessName || customer.name}</span>
             </p>
           </div>
+        ) : (
+           <p className="text-muted-foreground mt-2">No customer selected or loaded.</p>
         )}
       </div>
 
-      {!customer && (
-        <Card className="enhanced-card">
-          <CardContent className="py-8">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold mb-2 text-brand-purple">No Customer Selected</h2>
-              <p className="text-muted-foreground">Please select a customer in the Administrator Portal first.</p>
-              <Button asChild className="mt-4 bg-brand-purple hover:bg-brand-purple/90 micro-interaction">
-                <Link href="/administrator">Go to Administrator Portal</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {customer && (
+      {/* Show content only if a customer is loaded */}
+      {customer ? (
         <>
           <Card className="enhanced-card">
             <CardHeader className="border-b bg-gradient-to-r from-brand-purple/5 to-transparent">
@@ -355,33 +432,43 @@ export default function CustomerPortal() {
               )}
             </CardContent>
           </Card>
+
+          <ServerRegistrationModal
+            isOpen={serverRegistrationModal}
+            onClose={() => setServerRegistrationModal(false)}
+            onSubmit={handleServerRegistration}
+          />
+
+          <ServerSelectionModal
+            isOpen={serverSelectionModal.isOpen}
+            onClose={closeServerSelectionModal}
+            onSubmit={handleActivationRequest}
+            customerId={customer.id || ""}
+          />
+
+          <LicenseDownloadModal
+            isOpen={licenseDownloadModal}
+            onClose={() => setLicenseDownloadModal(false)}
+            customerId={customer.id || ""}
+          />
+
+          <LicenseDeactivationModal
+            isOpen={licenseDeactivationModal}
+            onClose={() => setLicenseDeactivationModal(false)}
+            customerId={customer.id || ""}
+          />
         </>
+      ) : (
+        // Optional: Show a message or prompt if no customer is selected
+        <Card className="enhanced-card">
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">Please select a customer from the Administrator Portal.</p>
+            <Button asChild className="mt-4 bg-brand-purple hover:bg-brand-purple/90 micro-interaction">
+              <Link href="/administrator">Go to Administrator Portal</Link>
+            </Button>
+          </CardContent>
+        </Card>
       )}
-
-      <ServerRegistrationModal
-        isOpen={serverRegistrationModal}
-        onClose={() => setServerRegistrationModal(false)}
-        onSubmit={handleServerRegistration}
-      />
-
-      <ServerSelectionModal
-        isOpen={serverSelectionModal.isOpen}
-        onClose={closeServerSelectionModal}
-        onSubmit={handleActivationRequest}
-        customerId={customerId || ""}
-      />
-
-      <LicenseDownloadModal
-        isOpen={licenseDownloadModal}
-        onClose={() => setLicenseDownloadModal(false)}
-        customerId={customerId || ""}
-      />
-
-      <LicenseDeactivationModal
-        isOpen={licenseDeactivationModal}
-        onClose={() => setLicenseDeactivationModal(false)}
-        customerId={customerId || ""}
-      />
     </div>
-  )
+  );
 }

@@ -11,81 +11,154 @@ import PurchaseOrderList from "@/components/purchase-order-list"
 import PurchaseOrderForm from "@/components/purchase-order-form"
 import { debounce } from "lodash" // You may need to install this
 
+// Define a type for your customer for better type safety
+interface Customer {
+  id: string;
+  name: string;
+  businessName?: string; // Make optional if it might be missing
+  // Add other customer properties as needed
+}
+
 export default function AdministratorPage() {
   // Get store state and subscribe to changes
-  const { customers, currentCustomerId, setCurrentCustomer, searchCustomers } = useStore()
+  const { customers, currentCustomerId, setCurrentCustomer } = useStore()
 
-  // Find current customer directly from the customers array
-  const currentCustomer = currentCustomerId ? customers.find((c) => c.id === currentCustomerId) : null
+  // Local state to hold the full data of the *most recently selected* customer
+  // This will now also hold the customer fetched on initial load if needed
+  const [selectedCustomerData, setSelectedCustomerData] = useState<Customer | null>(null);
+
+  // Find customer from the main store list (for persistence/initial load)
+  const storeCustomer = currentCustomerId ? customers.find((c) => c.id === currentCustomerId) : null
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searchResults, setSearchResults] = useState<Customer[]>([])
   const [showAddPurchaseOrder, setShowAddPurchaseOrder] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false) // For search loading
+  const [isInitialLoading, setIsInitialLoading] = useState(true); // For initial customer load
 
-  // Function to fetch customers from API
+  // --- NEW: useEffect to fetch initial customer data if needed ---
+  useEffect(() => {
+    const fetchInitialCustomer = async (id: string) => {
+      // Check if we already found the customer in the store's list
+      const customerFromStore = customers.find(c => c.id === id);
+      if (customerFromStore) {
+        setSelectedCustomerData(customerFromStore);
+        setIsInitialLoading(false);
+        return;
+      }
+
+      // If not found in store list, fetch from API
+      console.log(`Initial customer ID ${id} not found in store list, fetching...`);
+      try {
+        const response = await fetch(`/api/customers/${id}`); // Use the specific customer API endpoint
+        if (!response.ok) {
+          throw new Error("Failed to fetch initial customer details.");
+        }
+        const data: Customer = await response.json();
+        setSelectedCustomerData(data);
+      } catch (error) {
+        console.error("Error fetching initial customer:", error);
+        // Optionally clear the invalid ID from the store
+        // setCurrentCustomer(null);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+
+    if (currentCustomerId) {
+      fetchInitialCustomer(currentCustomerId);
+    } else {
+      // No initial customer ID
+      setIsInitialLoading(false);
+    }
+  }, [currentCustomerId, customers]); // Rerun if ID changes or customers list updates
+
+  // --- Existing fetchCustomers for search remains the same ---
   const fetchCustomers = useCallback(async (query: string) => {
+    // ... (fetchCustomers implementation remains the same) ...
     if (!query.trim()) {
       setSearchResults([]);
       return;
     }
-
     setIsLoading(true);
     try {
       const response = await fetch(`/api/customers?businessName=${encodeURIComponent(query)}`);
       if (!response.ok) throw new Error('Failed to fetch customers');
-      
       const data = await response.json();
       setSearchResults(data);
       setSearchError(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error searching customers:', error);
-      setSearchError("Failed to search customers");
+      setSearchError(error.message || "Failed to search customers");
       setSearchResults([]);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Create debounced version of search function
+  // --- Existing debouncedSearch and useEffect for search remain the same ---
   const debouncedSearch = useCallback(
-    debounce((query: string) => {
-      fetchCustomers(query);
-    }, 300),
+    debounce((query: string) => { fetchCustomers(query); }, 300),
     [fetchCustomers]
   );
 
-  // Trigger search when search query changes
   useEffect(() => {
+    // ... (search useEffect implementation remains the same) ...
     if (searchQuery.trim().length >= 2) {
       debouncedSearch(searchQuery);
     } else {
       setSearchResults([]);
     }
-    
-    // Cleanup function
-    return () => {
-      debouncedSearch.cancel();
-    };
+    return () => { debouncedSearch.cancel(); };
   }, [searchQuery, debouncedSearch]);
 
-  const handleSelectCustomer = (customer: any) => {
-    setCurrentCustomer(customer.id)
-    setSearchResults([])
-    setSearchQuery("")
-    setSearchError(null)
+  // --- Existing handleSelectCustomer remains the same ---
+  const handleSelectCustomer = (customer: Customer) => {
+    console.log("Selecting customer:", customer);
+    setCurrentCustomer(customer.id);
+    setSelectedCustomerData(customer); // Store locally for immediate display
+    setSearchResults([]);
+    setSearchQuery("");
+    setSearchError(null);
+    console.log("Updated store with customer ID:", customer.id);
+    console.log("Set local selectedCustomerData:", customer);
   }
+
+  // --- Existing useEffect to sync local state with store changes remains the same ---
+  // This effect might need slight adjustment if fetchInitialCustomer runs later
+  useEffect(() => {
+    if (currentCustomerId) {
+      const customerFromStore = customers.find(c => c.id === currentCustomerId);
+      // Only update local state if customerFromStore is found AND
+      // it's different from what's already selected (or nothing is selected yet)
+      if (customerFromStore && customerFromStore.id !== selectedCustomerData?.id) {
+         setSelectedCustomerData(customerFromStore);
+      }
+    } else if (!isInitialLoading) { // Avoid clearing if we are still loading the initial customer
+       setSelectedCustomerData(null);
+    }
+  }, [currentCustomerId, customers, selectedCustomerData, isInitialLoading]);
+
+
+  // Determine which customer data to display (prioritize local selection/fetch)
+  // Use selectedCustomerData directly now as it holds both search selections and initial fetches
+  const customerToDisplay = selectedCustomerData;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-brand-purple">License Manager - Administrator Portal</h1>
-          {currentCustomer ? (
+          {/* Display based on initial loading state and customerToDisplay */}
+          {isInitialLoading ? (
+             <div className="mt-2 p-3 border rounded bg-gray-100 border-gray-200">
+               <p className="text-muted-foreground">Loading customer...</p>
+             </div>
+          ) : customerToDisplay ? (
             <div className="mt-2 p-3 border rounded bg-brand-purple/5 border-brand-purple/20">
               <p className="text-lg">
-                Current Customer: <span className="font-semibold">{currentCustomer.name}</span>
+                Current Customer: <span className="font-semibold">{customerToDisplay.businessName || customerToDisplay.name}</span>
               </p>
             </div>
           ) : (
@@ -151,11 +224,11 @@ export default function AdministratorPage() {
             </div>
           )}
 
-          {currentCustomer && <CustomerDetails customer={currentCustomer} />}
+          {customerToDisplay && <CustomerDetails customer={customerToDisplay} />}
         </CardContent>
       </Card>
 
-      {currentCustomer && (
+      {customerToDisplay && (
         <Card className="enhanced-card">
           <CardHeader className="flex flex-row items-center justify-between border-b bg-gradient-to-r from-brand-purple/5 to-transparent">
             <CardTitle>Purchase Orders</CardTitle>
@@ -170,12 +243,12 @@ export default function AdministratorPage() {
           <CardContent className="pt-6">
             {showAddPurchaseOrder ? (
               <PurchaseOrderForm
-                customerId={currentCustomer.id}
+                customerId={customerToDisplay.id} // Use ID from customerToDisplay
                 onCancel={() => setShowAddPurchaseOrder(false)}
                 onSuccess={() => setShowAddPurchaseOrder(false)}
               />
             ) : (
-              <PurchaseOrderList customerId={currentCustomer.id} isAdminView={true} />
+              <PurchaseOrderList customerId={customerToDisplay.id} isAdminView={true} /> // Use ID from customerToDisplay
             )}
           </CardContent>
         </Card>

@@ -6,7 +6,9 @@ import { v4 as uuidv4 } from "uuid"
 import { addYears } from "date-fns"
 import type { StoreState } from "./types"
 
+// Apply persist middleware to store state in localStorage
 export const useStore = create<StoreState>()(
+  persist(
     (set, get) => ({
       customers: [],
       purchaseOrders: [],
@@ -247,5 +249,10 @@ export const useStore = create<StoreState>()(
         const { users } = get()
         return !users.some((user) => user.username.toLowerCase() === username.toLowerCase())
       },
-    })
+    }),
+    {
+      name: 'license-manager-storage', // unique name for localStorage
+      storage: createJSONStorage(() => localStorage)
+    }
+  )
 )
