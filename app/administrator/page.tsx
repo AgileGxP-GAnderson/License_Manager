@@ -6,18 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useStore } from "@/lib/store"
+import { Customer} from "@/lib/types"
 import CustomerDetails from "@/components/customer-details"
 import PurchaseOrderList from "@/components/purchase-order-list"
 import PurchaseOrderForm from "@/components/purchase-order-form"
 import { debounce } from "lodash" // You may need to install this
-
-// Define a type for your customer for better type safety
-interface Customer {
-  id: string;
-  name: string;
-  businessName?: string; // Make optional if it might be missing
-  // Add other customer properties as needed
-}
 
 export default function AdministratorPage() {
   // Get store state and subscribe to changes
@@ -34,7 +27,8 @@ export default function AdministratorPage() {
   const [searchResults, setSearchResults] = useState<Customer[]>([])
   const [showAddPurchaseOrder, setShowAddPurchaseOrder] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false) // For search loading
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false) // Renamed for clarity
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false); // For loading full details
   const [isInitialLoading, setIsInitialLoading] = useState(true); // For initial customer load
 
   // --- NEW: useEffect to fetch initial customer data if needed ---
@@ -43,13 +37,16 @@ export default function AdministratorPage() {
       // Check if we already found the customer in the store's list
       const customerFromStore = customers.find(c => c.id === id);
       if (customerFromStore) {
-        setSelectedCustomerData(customerFromStore);
-        setIsInitialLoading(false);
-        return;
+        // Ensure store version has all details, otherwise fetch anyway
+        if (customerFromStore.email && customerFromStore.addressLine1) { // Check for essential details
+           setSelectedCustomerData(customerFromStore);
+           setIsInitialLoading(false);
+           return;
+        }
       }
 
-      // If not found in store list, fetch from API
-      console.log(`Initial customer ID ${id} not found in store list, fetching...`);
+      console.log(`Initial/incomplete customer ID ${id}, fetching full details...`);
+      setIsLoadingDetails(true); // Indicate details loading
       try {
         const response = await fetch(`/api/customers/${id}`); // Use the specific customer API endpoint
         if (!response.ok) {
@@ -62,6 +59,7 @@ export default function AdministratorPage() {
         // Optionally clear the invalid ID from the store
         // setCurrentCustomer(null);
       } finally {
+        setIsLoadingDetails(false);
         setIsInitialLoading(false);
       }
     };
@@ -81,7 +79,7 @@ export default function AdministratorPage() {
       setSearchResults([]);
       return;
     }
-    setIsLoading(true);
+    setIsLoadingSearch(true);
     try {
       const response = await fetch(`/api/customers?businessName=${encodeURIComponent(query)}`);
       if (!response.ok) throw new Error('Failed to fetch customers');
@@ -93,7 +91,7 @@ export default function AdministratorPage() {
       setSearchError(error.message || "Failed to search customers");
       setSearchResults([]);
     } finally {
-      setIsLoading(false);
+      setIsLoadingSearch(false);
     }
   }, []);
 
@@ -113,17 +111,45 @@ export default function AdministratorPage() {
     return () => { debouncedSearch.cancel(); };
   }, [searchQuery, debouncedSearch]);
 
-  // --- Existing handleSelectCustomer remains the same ---
-  const handleSelectCustomer = (customer: Customer) => {
-    console.log("Selecting customer:", customer);
-    setCurrentCustomer(customer.id);
-    setSelectedCustomerData(customer); // Store locally for immediate display
+  // --- MODIFIED: handleSelectCustomer to fetch full details ---
+  const handleSelectCustomer = async (customerFromSearch: Customer) => {
+    console.log("Selecting customer from search:", customerFromSearch);
+
+    // 1. Update store ID
+    setCurrentCustomer(customerFromSearch.id);
+
+    // 2. Immediately set local state with potentially partial data for top display
+    setSelectedCustomerData(customerFromSearch);
+
+    // 3. Clear search UI
     setSearchResults([]);
     setSearchQuery("");
     setSearchError(null);
-    console.log("Updated store with customer ID:", customer.id);
-    console.log("Set local selectedCustomerData:", customer);
-  }
+
+    // 4. Check if we already have full details (e.g., email, address)
+    if (customerFromSearch.email && customerFromSearch.addressLine1) {
+      console.log("Search result already has full details.");
+      return; // No need to fetch again
+    }
+
+    // 5. Fetch full details asynchronously
+    console.log("Fetching full details for selected customer:", customerFromSearch.id);
+    setIsLoadingDetails(true); // Show loading indicator for details section
+    try {
+      const response = await fetch(`/api/customers/${customerFromSearch.id}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch full customer details after selection.");
+      }
+      const fullCustomerData: Customer = await response.json();
+      setSelectedCustomerData(fullCustomerData); // Update local state with full data
+      console.log("Successfully fetched and set full customer details:", fullCustomerData);
+    } catch (error) {
+      console.error("Error fetching full customer details:", error);
+      // Keep the partial data for now, maybe show an error message near CustomerDetails
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
 
   // --- Existing useEffect to sync local state with store changes remains the same ---
   // This effect might need slight adjustment if fetchInitialCustomer runs later
@@ -184,7 +210,7 @@ export default function AdministratorPage() {
                   }}
                   className="border-brand-purple/20 focus-visible:ring-brand-purple/30"
                 />
-                {isLoading && (
+                {isLoadingSearch && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                     <div className="animate-spin h-4 w-4 border-2 border-brand-purple border-opacity-50 border-t-brand-purple rounded-full"></div>
                   </div>
@@ -218,13 +244,27 @@ export default function AdministratorPage() {
             </div>
           )}
 
-          {searchQuery.trim().length >= 2 && !isLoading && searchResults.length === 0 && (
+          {searchQuery.trim().length >= 2 && !isLoadingSearch && searchResults.length === 0 && (
             <div className="mb-6 border rounded-md p-4 border-brand-purple/20 bg-brand-purple/5">
               <p className="text-center text-muted-foreground">No customers found matching "{searchQuery}"</p>
             </div>
           )}
 
-          {customerToDisplay && <CustomerDetails customer={customerToDisplay} />}
+          {isLoadingDetails ? (
+            <div className="text-center py-4">
+              <p>Loading customer details...</p>
+              {/* Optional spinner */}
+            </div>
+          ) : customerToDisplay ? (
+            // Ensure CustomerDetails receives the correct prop
+            <CustomerDetails customer={customerToDisplay} />
+          ) : (
+            !isInitialLoading && !searchQuery && ( // Show only if not loading initially and not searching
+              <p className="text-center py-4 text-muted-foreground">
+                Search for a customer above or select one if previously chosen.
+              </p>
+            )
+          )}
         </CardContent>
       </Card>
 

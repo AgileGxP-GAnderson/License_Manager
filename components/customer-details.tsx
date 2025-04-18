@@ -12,30 +12,30 @@ export default function CustomerDetails({ customer }: CustomerDetailsProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Customer Name</p>
-            <p className="font-medium text-brand-purple">{customer.name}</p>
+            <p className="font-medium text-brand-purple">{customer.businessName}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Contact Person</p>
-            <p>{customer.contactPerson}</p>
+            <p>{customer.contactName}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Email</p>
-            <p>{customer.email}</p>
+            <p>{customer.contactEmail}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Phone</p>
-            <p>{customer.phone}</p>
+            <p>{customer.contactPhone}</p>
           </div>
 
           {/* Address Fields */}
           <div className="md:col-span-2 p-3 bg-brand-purple/5 rounded-md">
             <p className="text-sm font-medium text-muted-foreground mb-1">Address</p>
-            <p>{customer.addressLine1}</p>
-            {customer.addressLine2 && <p>{customer.addressLine2}</p>}
+            <p>{customer.businessAddress1}</p>
+            {customer.businessAddress2 && <p>{customer.businessAddress2}</p>}
             <p>
-              {customer.city}, {customer.state} {customer.zipCode}
+              {customer.businessAddressCity}, {customer.businessAddressState} {customer.businessAddressZip}
             </p>
-            <p>{customer.country}</p>
+            <p>{customer.businessAddressCountry}</p>
           </div>
         </div>
       </CardContent>

@@ -1,15 +1,15 @@
 export interface Customer {
-  id: string
-  name: string
-  addressLine1: string
-  addressLine2?: string
-  city: string
-  state: string
-  zipCode: string
-  country: string
-  contactPerson: string
-  email: string
-  phone: string
+  id: string; // Keep as string for frontend consistency, API should map number to string
+  businessName: string;
+  contactName: string;
+  contactEmail?: string | null; // Changed from 'contact', made optional
+  contactPhone?: string | null; // Changed from 'phone', made optional
+  businessAddress1?: string | null; // Changed from 'addressLine1', made optional
+  businessAddress2?: string | null; // Changed from 'addressLine2', kept optional
+  businessAddressCity?: string | null; // Changed from 'city', made optional
+  businessAddressState?: string | null; // Changed from 'state', made optional
+  businessAddressZip?: string | null; // Changed from 'zipCode', made optional
+  businessAddressCountry?: string | null; // Changed from 'country', made optional
 }
 
 export interface User {
