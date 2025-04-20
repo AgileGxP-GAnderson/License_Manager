@@ -31,11 +31,11 @@ function Calendar({
     <div className={cn("p-3", className)}>
       <DatePicker
         selected={value}
-        onChange={(date, event) => {
-          if (Array.isArray(date)) {
-            const [start, end] = date;
-            onChange?.(start); 
-          } else {
+        onChange={(date: Date[] | null, event) => {
+          if (Array.isArray(date) && date.length === 2) {
+            const [start] = date;
+            onChange?.(start);
+          } else if (!Array.isArray(date)) {
             onChange?.(date);
           }
         }}

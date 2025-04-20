@@ -57,12 +57,12 @@ export interface StoreState {
   currentCustomer: Customer | null
 
   // Actions
-  addCustomer: (customer: Omit<Customer, "id">) => string
+  addCustomer: (customer: Omit<Customer, "id">) => Promise<string>;
   updateCustomer: (id: string, customer: Partial<Customer>) => void
   setCurrentCustomer: (id: string | null) => void
   searchCustomers: (query: string) => Customer[]
 
-  addPurchaseOrder: (customerId: string, po: Omit<PurchaseOrder, "id" | "customerId">) => string
+  addPurchaseOrder: (customerId: string, po: Omit<PurchaseOrder, "id" | "customerId">) => Promise<string>;
   updatePurchaseOrder: (id: string, po: Partial<Omit<PurchaseOrder, "id" | "customerId">>) => void
   getPurchaseOrdersByCustomerId: (customerId: string) => PurchaseOrder[]
 
