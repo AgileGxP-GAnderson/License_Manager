@@ -42,37 +42,55 @@ export const useStore = create<StoreState>()(
       },
 
       // --- Customer Actions ---
-      addCustomer: async (customer: AddCustomerInput) => {
-        // Note: This currently only adds to local state.
-        // Needs API call similar to updateCustomer for persistence.
-        console.warn("addCustomer currently only updates local state. API call needed.");
-        const id = uuidv4() // Use UUID for local state before API confirmation if needed
-        const newCustomer = { ...customer, id }
+      addCustomer: async (customer: AddCustomerInput): Promise<Customer> => { // Ensure return type is Promise<Customer>
+        console.log('[Store Action] addCustomer called with data:', customer);
+        try {
+          const response = await fetch('/api/customers', {
+            method: 'POST',
+            // --- FIX: Add Headers and Body ---
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(customer),
+            // --- End Fix ---
+          });
 
-        // --- TODO: Add API Call Here ---
-        // try {
-        //   const response = await fetch('/api/customers', { method: 'POST', ... });
-        //   if (!response.ok) throw new Error('Failed to add customer via API');
-        //   const savedCustomer = await response.json();
-        //   set((state) => ({
-        //     customers: [...state.customers, savedCustomer],
-        //     currentCustomerId: savedCustomer.id, // Use ID from API
-        //   }));
-        //   return savedCustomer.id;
-        // } catch (error) {
-        //   console.error("Error adding customer:", error);
-        //   throw error; // Re-throw for component handling
-        // }
+          console.log('[Store Action] addCustomer API response status:', response.status);
 
-        // --- Temporary Local State Update ---
-        set((state) => ({
-          customers: [...state.customers, newCustomer],
-          currentCustomerId: id,
-        }))
-        return id; // Return temporary ID
+          if (!response.ok) {
+            const errorBody = await response.text();
+            console.error("[Store Action] API Error adding customer:", response.status, errorBody);
+            throw new Error(`Failed to add customer: ${response.statusText} - ${errorBody}`);
+          }
+
+          const savedCustomer: Customer = await response.json(); // Assuming API returns the full customer object
+          console.log('[Store Action] Received new customer from API:', savedCustomer);
+
+          set((state) => ({
+            customers: [...state.customers, savedCustomer],
+            // Optionally set currentCustomerId if desired after adding
+            // currentCustomerId: savedCustomer.id,
+          }));
+
+          // --- FIX: Return the full customer object ---
+          return savedCustomer;
+
+        } catch (error) {
+          console.error("[Store Action] Error adding customer:", error);
+          throw error; // Re-throw for component handling
+        }
+
+        // --- REMOVE Redundant Local Update Block ---
+        // This block should not be here as it bypasses the API result.
+        // set((state) => ({
+        //   customers: [...state.customers, newCustomer],
+        //   currentCustomerId: id,
+        // }))
+        // return id; // Return temporary ID
+        // --- End Removal ---
       },
 
-      updateCustomer: async (id: string, customerUpdateData: Partial<Customer>): Promise<Customer> => { // <-- Specify return type Promise<Customer>
+      updateCustomer: async (id: string, customerUpdateData: Partial<Customer>): Promise<Customer> => {
         console.log('[Store Action] updateCustomer called for id:', id, 'with data:', customerUpdateData);
         try {
           const response = await fetch(`/api/customers/${id}`, {
