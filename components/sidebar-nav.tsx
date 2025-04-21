@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Users, Factory, UserPlus } from "lucide-react"
+import { Ticket, Factory, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -12,9 +12,10 @@ export function SidebarNav() {
   const pathname = usePathname()
   const { currentCustomerId } = useStore()
 
-  const isAdminPage = pathname === "/administrator"
+  // --- UPDATE Path Checks ---
+  const isAdminManageLicensesPage = pathname === "/admin-manage-licenses"
   const isCustomerPage = pathname.startsWith("/customer")
-  const isAddCustomerUserPage = pathname === "/add-customer-user"
+  const isAdminManageCustomerPage = pathname === "/admin-manage-customer"
 
   // Determine the customer page URL - if we have a customer ID, include it in the URL
   const customerPageUrl = currentCustomerId ? `/customer?id=${currentCustomerId}` : "/customer"
@@ -22,7 +23,7 @@ export function SidebarNav() {
   return (
     <div className="fixed left-0 top-0 h-full w-16 bg-gradient-to-b from-brand-purple to-brand-purple/90 border-r border-brand-purple/20 flex flex-col items-center py-6 space-y-4 z-10">
       <TooltipProvider>
-        {/* Administrator Icon */}
+        {/* Admin Manage Licenses Icon */}
         <Tooltip>
           <TooltipTrigger asChild>
             <div>
@@ -31,30 +32,34 @@ export function SidebarNav() {
                 size="icon"
                 className={cn(
                   "h-10 w-10 rounded-full text-white hover:bg-white/10",
-                  isAdminPage && "bg-white/20 text-white pointer-events-none",
+                  // --- UPDATE Active State Check ---
+                  isAdminManageLicensesPage && "bg-white/20 text-white pointer-events-none",
                 )}
-                asChild={!isAdminPage}
-                disabled={isAdminPage}
+                // --- UPDATE Active State Check ---
+                asChild={!isAdminManageLicensesPage}
+                disabled={isAdminManageLicensesPage}
               >
-                {!isAdminPage ? (
-                  <Link href="/administrator">
-                    <Users className="h-5 w-5" />
-                    <span className="sr-only">Administrator Portal</span>
+                {/* --- UPDATE Link and Active State Check --- */}
+                {!isAdminManageLicensesPage ? (
+                  <Link href="/admin-manage-licenses">
+                    <Ticket className="h-5 w-5 text-red-400" />
+                    <span className="sr-only">Admin Manage Licenses</span>
                   </Link>
                 ) : (
                   <div className="flex items-center justify-center">
-                    <Users className="h-5 w-5" />
+                    <Ticket className="h-5 w-5 text-red-400" />
                   </div>
                 )}
               </Button>
             </div>
           </TooltipTrigger>
           <TooltipContent side="right">
-            <p>Administrator</p>
+            {/* Optional: Update tooltip text */}
+            <p>Admin - Manage Licenses</p>
           </TooltipContent>
         </Tooltip>
 
-        {/* Add Customer/User Icon - Now active on both Admin and Customer pages */}
+        {/* Admin Manage Customer/User Icon */}
         <Tooltip>
           <TooltipTrigger asChild>
             <div>
@@ -63,27 +68,30 @@ export function SidebarNav() {
                 size="icon"
                 className={cn(
                   "h-10 w-10 rounded-full text-white hover:bg-white/10",
-                  isAddCustomerUserPage && "bg-white/20 text-white pointer-events-none",
-                  !isAdminPage && !isCustomerPage && !isAddCustomerUserPage && "opacity-50 pointer-events-none",
+                  // --- UPDATE Active State Check ---
+                  isAdminManageCustomerPage && "bg-white/20 text-white pointer-events-none",
                 )}
-                asChild={!isAddCustomerUserPage && (isAdminPage || isCustomerPage)}
-                disabled={isAddCustomerUserPage || (!isAdminPage && !isCustomerPage)}
+                // --- UPDATE Active State Check ---
+                asChild={!isAdminManageCustomerPage}
+                disabled={isAdminManageCustomerPage}
               >
-                {!isAddCustomerUserPage && (isAdminPage || isCustomerPage) ? (
-                  <Link href="/add-customer-user">
-                    <UserPlus className="h-5 w-5" />
-                    <span className="sr-only">Add Customer / User</span>
+                 {/* --- UPDATE Link and Active State Check --- */}
+                {!isAdminManageCustomerPage ? (
+                  <Link href="/admin-manage-customer">
+                    <User className="h-5 w-5 text-red-400" />
+                    <span className="sr-only">Admin Manage Customer / User</span>
                   </Link>
                 ) : (
                   <div className="flex items-center justify-center">
-                    <UserPlus className="h-5 w-5" />
+                    <User className="h-5 w-5 text-red-400" />
                   </div>
                 )}
               </Button>
             </div>
           </TooltipTrigger>
           <TooltipContent side="right">
-            <p>Add Customer / User</p>
+             {/* Optional: Update tooltip text */}
+            <p>Admin - Manage Customer</p>
           </TooltipContent>
         </Tooltip>
 
