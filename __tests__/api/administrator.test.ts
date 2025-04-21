@@ -25,9 +25,9 @@ function createMockNextRequest(options: any): NextRequest {
 // Helper to create an admin via API for test setup
 async function createAdminViaApi(data: Partial<AdministratorInput>): Promise<AdministratorOutput> {
     // Ensure password is base64 encoded for the API call
-    const passwordString = data.passwordEncrypted instanceof Buffer
-        ? data.passwordEncrypted.toString('utf8')
-        : data.passwordEncrypted || 'defaultPassword';
+    const passwordString = data.password instanceof Buffer
+        ? data.password.toString('utf8')
+        : data.password || 'defaultPassword';
     const finalPasswordString = typeof passwordString === 'string' ? passwordString : 'defaultPassword';
     const passwordInput = Buffer.from(finalPasswordString).toString('base64');
 
@@ -36,7 +36,7 @@ async function createAdminViaApi(data: Partial<AdministratorInput>): Promise<Adm
         // Ensure unique login/email for setup helper if needed, or rely on global reset
         login: data.login || faker.internet.userName() + `-${Date.now()}`,
         email: data.email || faker.internet.email(), // Use standard faker email
-        passwordEncrypted: passwordInput
+        password: passwordInput
     };
     const req = createMockNextRequest({ method: 'POST', body: apiData });
     const response = await administratorsRoute.POST(req);
@@ -73,7 +73,7 @@ describe('Administrator API Routes', () => {
         lastName: faker.person.lastName(),
         login: faker.internet.userName() + `-${Date.now()}`, // Ensure unique login
         email: faker.internet.email(), // Use standard faker email
-        passwordEncrypted: Buffer.from(faker.internet.password()).toString('base64'), // Send as base64
+        password: Buffer.from(faker.internet.password()).toString('base64'), // Send as base64
         isActive: true,
       };
 
@@ -85,7 +85,7 @@ describe('Administrator API Routes', () => {
       expect(json).toHaveProperty('id');
       expect(json.firstName).toBe(newAdminData.firstName);
       expect(json.login).toBe(newAdminData.login);
-      expect(json).not.toHaveProperty('passwordEncrypted');
+      expect(json).not.toHaveProperty('password');
 
       // Verify in DB
       const adminInDb = await db.Administrator.findByPk(json.id);
@@ -105,13 +105,13 @@ describe('Administrator API Routes', () => {
         const uniqueLogin = `login-${Date.now()}`;
         const admin1 = await createAdminViaApi({
             firstName: 'Existing', lastName: 'Admin', login: uniqueLogin,
-            email: faker.internet.email(), passwordEncrypted: Buffer.from('password'), isActive: true
+            email: faker.internet.email(), password: Buffer.from('password'), isActive: true
         });
 
         // Attempt to create another admin with the same login
         const duplicateData = {
             firstName: 'New', lastName: 'Person', login: admin1.login, // Use the exact same login
-            email: faker.internet.email(), passwordEncrypted: Buffer.from('password').toString('base64'), isActive: true
+            email: faker.internet.email(), password: Buffer.from('password').toString('base64'), isActive: true
         };
         const req = createMockNextRequest({ method: 'POST', body: duplicateData });
         const response = await administratorsRoute.POST(req); // Call handler directly
@@ -122,8 +122,8 @@ describe('Administrator API Routes', () => {
   // --- Test GET /api/administrators ---
   describe('GET /api/administrators', () => {
      it('should return a list containing created administrators', async () => {
-        const admin1 = await createAdminViaApi({ firstName: 'ListAdmin1', lastName: 'Test', login: `list1-${Date.now()}`, email: faker.internet.email(), passwordEncrypted: Buffer.from('pw1'), isActive: true });
-        const admin2 = await createAdminViaApi({ firstName: 'ListAdmin2', lastName: 'Test', login: `list2-${Date.now()}`, email: faker.internet.email(), passwordEncrypted: Buffer.from('pw2'), isActive: false });
+        const admin1 = await createAdminViaApi({ firstName: 'ListAdmin1', lastName: 'Test', login: `list1-${Date.now()}`, email: faker.internet.email(), password: Buffer.from('pw1'), isActive: true });
+        const admin2 = await createAdminViaApi({ firstName: 'ListAdmin2', lastName: 'Test', login: `list2-${Date.now()}`, email: faker.internet.email(), password: Buffer.from('pw2'), isActive: false });
 
         const req = createMockNextRequest({ method: 'GET' });
         const response = await administratorsRoute.GET(req);
@@ -136,7 +136,7 @@ describe('Administrator API Routes', () => {
         expect(responseAdmins.some((a) => a.id === admin2.id)).toBe(true);
         // Ensure password is not returned in the list
         if (responseAdmins.length > 0) {
-            expect(responseAdmins[0]).not.toHaveProperty('passwordEncrypted');
+            expect(responseAdmins[0]).not.toHaveProperty('password');
         }
      });
   });
@@ -144,7 +144,7 @@ describe('Administrator API Routes', () => {
   // --- Test GET /api/administrators/:id ---
   describe('GET /api/administrators/:id', () => {
     it('should return a specific administrator if found', async () => {
-        const admin = await createAdminViaApi({ firstName: 'FetchAdmin', lastName: 'Test', login: `fetch-${Date.now()}`, email: faker.internet.email(), passwordEncrypted: Buffer.from('pw'), isActive: true });
+        const admin = await createAdminViaApi({ firstName: 'FetchAdmin', lastName: 'Test', login: `fetch-${Date.now()}`, email: faker.internet.email(), password: Buffer.from('pw'), isActive: true });
         const req = createMockNextRequest({ method: 'GET' });
         const context = { params: { id: admin.id.toString() } };
 
@@ -154,7 +154,7 @@ describe('Administrator API Routes', () => {
         expect(response.status).toBe(200);
         expect(json.id).toBe(admin.id);
         expect(json.login).toBe(admin.login);
-        expect(json).not.toHaveProperty('passwordEncrypted');
+        expect(json).not.toHaveProperty('password');
     });
 
      it('should return 404 if administrator not found', async () => {
@@ -168,7 +168,7 @@ describe('Administrator API Routes', () => {
    // --- Test PUT /api/administrators/:id ---
    describe('PUT /api/administrators/:id', () => {
         it('should update an existing administrator', async () => {
-            const admin = await createAdminViaApi({ firstName: 'UpdateAdmin', lastName: 'Old', login: `update-${Date.now()}`, email: faker.internet.email(), passwordEncrypted: Buffer.from('pw'), isActive: true });
+            const admin = await createAdminViaApi({ firstName: 'UpdateAdmin', lastName: 'Old', login: `update-${Date.now()}`, email: faker.internet.email(), password: Buffer.from('pw'), isActive: true });
             const updateData = { lastName: 'New', isActive: false };
 
             const req = createMockNextRequest({ method: 'PUT', body: updateData });
@@ -180,7 +180,7 @@ describe('Administrator API Routes', () => {
             expect(json.id).toBe(admin.id);
             expect(json.lastName).toBe(updateData.lastName);
             expect(json.isActive).toBe(updateData.isActive);
-            expect(json).not.toHaveProperty('passwordEncrypted');
+            expect(json).not.toHaveProperty('password');
 
             // Verify update in DB
             const updatedAdminDb = await db.Administrator.findByPk(admin.id);
@@ -192,7 +192,7 @@ describe('Administrator API Routes', () => {
     // --- Test DELETE /api/administrators/:id ---
     describe('DELETE /api/administrators/:id', () => {
         it('should delete an existing administrator', async () => {
-            const admin = await createAdminViaApi({ firstName: 'DeleteAdmin', lastName: 'Test', login: `delete-${Date.now()}`, email: faker.internet.email(), passwordEncrypted: Buffer.from('pw'), isActive: true });
+            const admin = await createAdminViaApi({ firstName: 'DeleteAdmin', lastName: 'Test', login: `delete-${Date.now()}`, email: faker.internet.email(), password: Buffer.from('pw'), isActive: true });
             const adminId = admin.id;
 
             const req = createMockNextRequest({ method: 'DELETE' });

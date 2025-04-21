@@ -25,8 +25,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return new NextResponse('Administrator not found', { status: 404 });
     }
 
-    // Omit passwordEncrypted from the response
-    const { passwordEncrypted, ...safeAdmin } = administrator.get({ plain: true });
+    // Omit password from the response
+    const { password, ...safeAdmin } = administrator.get({ plain: true });
     return NextResponse.json(safeAdmin);
 
   } catch (error) {
@@ -58,23 +58,23 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         const updateData: Partial<AdministratorInput> = { ...updateDataInput }; // Clone
 
         // Handle password update (assuming Base64 input)
-        if (updateData.passwordEncrypted !== undefined) {
+        if (updateData.password !== undefined) {
              try {
-                 if (typeof updateData.passwordEncrypted !== 'string') {
-                     throw new Error('passwordEncrypted must be a Base64 string');
+                 if (typeof updateData.password !== 'string') {
+                     throw new Error('password must be a Base64 string');
                  }
-                 updateData.passwordEncrypted = Buffer.from(updateData.passwordEncrypted, 'base64');
+                 updateData.password = Buffer.from(updateData.password, 'base64');
              } catch (e) {
-                 return new NextResponse('Invalid Base64 encoding for passwordEncrypted', { status: 400 });
+                 return new NextResponse('Invalid Base64 encoding for password', { status: 400 });
              }
         } else {
-             delete updateData.passwordEncrypted;
+             delete updateData.password;
         }
 
         await administrator.update(updateData);
 
         // Omit password from response
-        const { passwordEncrypted, ...safeUpdatedAdmin } = administrator.get({ plain: true });
+        const { password, ...safeUpdatedAdmin } = administrator.get({ plain: true });
         return NextResponse.json(safeUpdatedAdmin);
 
     } catch (error: any) {

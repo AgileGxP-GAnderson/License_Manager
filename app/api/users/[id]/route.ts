@@ -28,8 +28,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return new NextResponse('User not found', { status: 404 });
     }
 
-    // Omit passwordEncrypted from the response
-    const { passwordEncrypted, ...safeUser } = user.get({ plain: true });
+    // Omit password from the response
+    const { password, ...safeUser } = user.get({ plain: true });
     return NextResponse.json(safeUser);
 
   } catch (error) {
@@ -70,18 +70,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
 
         // Handle password update (assuming Base64 input)
-        if (updateData.passwordEncrypted !== undefined) {
+        if (updateData.password !== undefined) {
              try {
-                 if (typeof updateData.passwordEncrypted !== 'string') {
-                     throw new Error('passwordEncrypted must be a Base64 string');
+                 if (typeof updateData.password !== 'string') {
+                     throw new Error('password must be a Base64 string');
                  }
-                 updateData.passwordEncrypted = Buffer.from(updateData.passwordEncrypted, 'base64');
+                 updateData.password = Buffer.from(updateData.password, 'base64');
              } catch (e) {
-                 return new NextResponse('Invalid Base64 encoding for passwordEncrypted', { status: 400 });
+                 return new NextResponse('Invalid Base64 encoding for password', { status: 400 });
              }
         } else {
             // Explicitly delete if not provided to avoid accidental nulling if that's not desired
-             delete updateData.passwordEncrypted;
+             delete updateData.password;
         }
 
 
@@ -94,7 +94,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
          if (!updatedUser) {
              return new NextResponse('Failed to retrieve updated user', { status: 500 });
         }
-        const { passwordEncrypted, ...safeUpdatedUser } = updatedUser.get({ plain: true });
+        const { password, ...safeUpdatedUser } = updatedUser.get({ plain: true });
         return NextResponse.json(safeUpdatedUser);
 
     } catch (error: any) {

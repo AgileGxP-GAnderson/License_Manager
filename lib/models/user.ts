@@ -10,7 +10,7 @@ interface UserAttributes {
   lastName: string;
   login: string;
   email: string; // Corrected from BIGINT
-  passwordEncrypted: Buffer; // Changed from bytea
+  password: string; // Changed from Buffer to string for bcrypt hash
   isActive: boolean; // Corrected from BIGINT
   createdAt?: Date;
   updatedAt?: Date;
@@ -30,7 +30,7 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
   public lastName!: string;
   public login!: string;
   public email!: string;
-  public passwordEncrypted!: Buffer;
+  public password!: string;
   public isActive!: boolean;
 
   // Timestamps
@@ -78,8 +78,8 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
             isEmail: true,
           },
         },
-        passwordEncrypted: {
-          type: DataTypes.BLOB,
+        password: {
+          type: DataTypes.STRING, // Ensure this is STRING or TEXT
           allowNull: false,
         },
         isActive: {
@@ -104,9 +104,10 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
   }
 
   // Define static associate method if needed
-  // public static associate(models: any) {
-  //    User.belongsTo(models.Customer, { foreignKey: 'customerId', as: 'customer' });
-  // }
+  public static associate(models: any) {
+     User.belongsTo(models.Customer, { foreignKey: 'customerId', as: 'customer' });
+  }
 }
 
 export default User;
+export type { UserAttributes, UserInput }; // Export types

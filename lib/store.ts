@@ -4,26 +4,8 @@ import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 import { v4 as uuidv4 } from "uuid"
 import { addYears } from "date-fns"
-import type { StoreState, Customer, PurchaseOrder, Server, User, License } from "./types" // Ensure all relevant types are imported
-
-// Define the input type expected by the store action for adding a customer
-interface AddCustomerInput extends Omit<Customer, 'id'> {}
-
-// Define the input type expected by the store action for adding a PO
-interface AddPurchaseOrderInput extends Omit<PurchaseOrder, 'id' | 'customerId' | 'purchaseDate' | 'licenses'> {
-  purchaseDate: Date | string; // Allow string from form, convert later
-  licenses: Array<Omit<License, 'id' | 'purchaseOrderId' | 'activationDate' | 'expirationDate'> & {
-    activationDate?: Date | string | null; // Allow string from form
-    expirationDate?: Date | string | null; // Allow string from form
-  }>;
-}
-
-// Define the input type expected by the store action for adding a Server
-interface AddServerInput extends Omit<Server, 'id'> {}
-
-// Define the input type expected by the store action for adding a User
-interface AddUserInput extends Omit<User, 'id'> {}
-
+// --- Ensure all relevant types are imported ---
+import type { StoreState, Customer, PurchaseOrder, Server, User, License, AddCustomerInput, AddPurchaseOrderInput, AddServerInput, AddUserInput } from "./types"
 
 // Apply persist middleware to store state in localStorage
 export const useStore = create<StoreState>()(
@@ -42,17 +24,15 @@ export const useStore = create<StoreState>()(
       },
 
       // --- Customer Actions ---
-      addCustomer: async (customer: AddCustomerInput): Promise<Customer> => { // Ensure return type is Promise<Customer>
+      addCustomer: async (customer: AddCustomerInput): Promise<Customer> => {
         console.log('[Store Action] addCustomer called with data:', customer);
         try {
           const response = await fetch('/api/customers', {
             method: 'POST',
-            // --- FIX: Add Headers and Body ---
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(customer),
-            // --- End Fix ---
           });
 
           console.log('[Store Action] addCustomer API response status:', response.status);
@@ -63,31 +43,19 @@ export const useStore = create<StoreState>()(
             throw new Error(`Failed to add customer: ${response.statusText} - ${errorBody}`);
           }
 
-          const savedCustomer: Customer = await response.json(); // Assuming API returns the full customer object
+          const savedCustomer: Customer = await response.json();
           console.log('[Store Action] Received new customer from API:', savedCustomer);
 
           set((state) => ({
             customers: [...state.customers, savedCustomer],
-            // Optionally set currentCustomerId if desired after adding
-            // currentCustomerId: savedCustomer.id,
           }));
 
-          // --- FIX: Return the full customer object ---
           return savedCustomer;
 
         } catch (error) {
           console.error("[Store Action] Error adding customer:", error);
-          throw error; // Re-throw for component handling
+          throw error;
         }
-
-        // --- REMOVE Redundant Local Update Block ---
-        // This block should not be here as it bypasses the API result.
-        // set((state) => ({
-        //   customers: [...state.customers, newCustomer],
-        //   currentCustomerId: id,
-        // }))
-        // return id; // Return temporary ID
-        // --- End Removal ---
       },
 
       updateCustomer: async (id: string, customerUpdateData: Partial<Customer>): Promise<Customer> => {
@@ -112,14 +80,12 @@ export const useStore = create<StoreState>()(
           const updatedCustomerFromServer: Customer = await response.json();
           console.log('[Store Action] Received updated customer from API:', updatedCustomerFromServer);
 
-          // Update the Zustand state
           set((state) => ({
             customers: state.customers.map((c) =>
-              c.id === id ? { ...c, ...updatedCustomerFromServer } : c // Use server data
+              c.id === id ? { ...c, ...updatedCustomerFromServer } : c
             ),
           }));
 
-          // --- RETURN the updated customer object ---
           return updatedCustomerFromServer;
 
         } catch (error) {
@@ -133,7 +99,6 @@ export const useStore = create<StoreState>()(
       },
 
       searchCustomers: (query: string) => {
-        // Note: This searches local state. For large datasets, API search is better.
         const { customers } = get()
         const lowerQuery = query.toLowerCase()
         return customers.filter(
@@ -143,28 +108,24 @@ export const useStore = create<StoreState>()(
 
       // --- Purchase Order Actions ---
       isPONumberUnique: (poNumber: string) => {
-        // Note: Checks local state. A database check via API is more reliable for uniqueness.
         const { purchaseOrders } = get()
         return !purchaseOrders.some((po) => po.poNumber === poNumber)
       },
 
-      addPurchaseOrder: async (customerId: string, po: AddPurchaseOrderInput) => {
+      addPurchaseOrder: async (customerId: string, po: AddPurchaseOrderInput): Promise<string> => { // Return PO ID
         console.log('[Store Action] addPurchaseOrder called with customerId:', customerId, 'and data:', po);
 
-        // Prepare data for the API (ensure customerId is included, convert dates)
         const apiPayload = {
           poNumber: po.poNumber,
-          purchaseDate: typeof po.purchaseDate === 'string' ? po.purchaseDate : po.purchaseDate.toISOString(), // Ensure ISO string for API
+          purchaseDate: typeof po.purchaseDate === 'string' ? po.purchaseDate : po.purchaseDate.toISOString(),
           customerId: parseInt(customerId, 10), // Assuming API expects number
           licenses: po.licenses.map(lic => ({
             ...lic,
-            // API might expect dates as strings or handle Date objects
             activationDate: lic.activationDate ? (typeof lic.activationDate === 'string' ? lic.activationDate : lic.activationDate.toISOString()) : null,
             expirationDate: lic.expirationDate ? (typeof lic.expirationDate === 'string' ? lic.expirationDate : lic.expirationDate.toISOString()) : null,
           })),
-          // Add other fields required by API, like isClosed if needed
-          isClosed: false, // Example: Set default if needed by API
-          poName: po.poNumber, // Example: Map poNumber to poName if API expects that
+          isClosed: false,
+          poName: po.poNumber,
         };
 
         console.log('[Store Action] Attempting fetch POST to /api/purchaseOrders with payload:', apiPayload);
@@ -186,10 +147,9 @@ export const useStore = create<StoreState>()(
             throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
           }
 
-          const newPurchaseOrderFromApi: PurchaseOrder = await response.json(); // Assuming API returns the created PO
+          const newPurchaseOrderFromApi: PurchaseOrder = await response.json();
           console.log('[Store Action] Received new PO from API:', newPurchaseOrderFromApi);
 
-          // Ensure dates from API are converted back to Date objects for store consistency
           const processedPO = {
             ...newPurchaseOrderFromApi,
             purchaseDate: new Date(newPurchaseOrderFromApi.purchaseDate),
@@ -200,21 +160,19 @@ export const useStore = create<StoreState>()(
             }))
           };
 
-          // Update the local store state
           set((state) => ({
             purchaseOrders: [...state.purchaseOrders, processedPO],
           }));
 
-          return processedPO.id; // Return ID from API
+          return processedPO.id;
 
         } catch (error) {
           console.error('[Store Action] Error during addPurchaseOrder fetch:', error);
-          throw error; // Re-throw for component handling
+          throw error;
         }
       },
 
       updatePurchaseOrder: (id: string, po: Partial<PurchaseOrder>) => {
-        // Note: This currently only updates local state. Needs API call.
         console.warn("updatePurchaseOrder currently only updates local state. API call needed.");
         set((state) => ({
           purchaseOrders: state.purchaseOrders.map((p) =>
@@ -222,7 +180,6 @@ export const useStore = create<StoreState>()(
               ? {
                   ...p,
                   ...po,
-                  // Ensure dates are handled correctly if updated
                   purchaseDate: po.purchaseDate ? new Date(po.purchaseDate) : p.purchaseDate,
                   licenses: po.licenses
                     ? po.licenses.map((license) => ({
@@ -243,7 +200,6 @@ export const useStore = create<StoreState>()(
       },
 
       // --- License Actions (within Purchase Orders) ---
-      // Note: These only update local state. API calls are needed for persistence.
       updateLicense: (poId: string, licenseIndex: number, licenseData: Partial<License>) => {
         console.warn("updateLicense currently only updates local state. API call needed.");
         set((state) => ({
@@ -254,7 +210,6 @@ export const useStore = create<StoreState>()(
                  updatedLicenses[licenseIndex] = {
                    ...updatedLicenses[licenseIndex],
                    ...licenseData,
-                   // Handle date conversions if necessary
                    activationDate: licenseData.activationDate ? new Date(licenseData.activationDate) : updatedLicenses[licenseIndex].activationDate,
                    expirationDate: licenseData.expirationDate ? new Date(licenseData.expirationDate) : updatedLicenses[licenseIndex].expirationDate,
                  }
@@ -296,14 +251,12 @@ export const useStore = create<StoreState>()(
         const license = po.licenses[licenseIndex]
         if (!license || license.status !== "Activation Requested" || !license.serverId) return
 
-        // Verify server exists (confirm fingerprint exists) - This check remains local
         const server = getServerById(license.serverId)
         if (!server || !server.fingerprint) return
 
         const now = new Date()
         let expirationDate: Date | null = null
 
-        // Calculate expiration date based on duration
         if (license.duration !== "Perpetual") {
           const durationYears = Number.parseInt(license.duration.split(" ")[0])
           if (!isNaN(durationYears)) {
@@ -353,15 +306,15 @@ export const useStore = create<StoreState>()(
       },
 
       // --- Server Actions ---
-      // Note: These only update local state. API calls are needed for persistence.
       addServer: (server: AddServerInput) => {
+        // --- TODO: Implement API call for addServer ---
         console.warn("addServer currently only updates local state. API call needed.");
         const id = uuidv4()
         const newServer = { ...server, id }
         set((state) => ({
           servers: [...state.servers, newServer],
         }))
-        return id
+        return id // Return temporary ID until API call is implemented
       },
 
       getServersByCustomerId: (customerId: string) => {
@@ -375,22 +328,85 @@ export const useStore = create<StoreState>()(
       },
 
       // --- User Actions ---
-      // Note: These only update local state. API calls are needed for persistence.
-      addUser: (user: AddUserInput) => {
-        console.warn("addUser currently only updates local state. API call needed.");
-        const id = uuidv4()
-        const newUser = { ...user, id }
-        set((state) => ({
-          users: [...state.users, newUser],
-        }))
-        return id
+      addUser: async (user: AddUserInput & { password?: string }): Promise<User> => {
+        console.log('[Store Action] addUser called with initial data:', user);
+
+        // --- Get currentCustomerId from store state ---
+        const currentCustomerId = get().currentCustomerId;
+
+        // --- Validate that a customer is selected ---
+        if (!currentCustomerId) {
+          console.error("[Store Action] Cannot add user: No current customer selected.");
+          throw new Error("Cannot add user: No customer is currently selected.");
+        }
+
+        // --- Prepare payload for API, ensuring currentCustomerId is included ---
+        const apiPayload = {
+          ...user, // Include username, password, email, etc. from the form
+          customerId: currentCustomerId, // Explicitly set customerId from store state
+        };
+
+        console.log('[Store Action] Attempting fetch POST to /api/users with payload:', apiPayload);
+
+        try {
+          const response = await fetch('/api/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(apiPayload), // Send the payload with the correct customerId
+          });
+
+          console.log('[Store Action] addUser API response status:', response.status);
+
+          if (!response.ok) {
+            const errorBody = await response.text();
+            console.error("[Store Action] API Error adding user:", response.status, errorBody);
+            let errorMessage = `Failed to add user: ${response.statusText}`;
+            if (response.status === 409) {
+                errorMessage = "Username already exists.";
+            } else if (response.status === 400) {
+                // Check if API provided specific field errors in the body
+                errorMessage = `Missing or invalid fields. API Response: ${errorBody}`;
+            } else {
+                errorMessage = `${errorMessage} - ${errorBody}`;
+            }
+            throw new Error(errorMessage);
+          }
+
+          const newUserFromApi: User = await response.json();
+          console.log('[Store Action] Received new user from API:', newUserFromApi);
+
+          set((state) => ({
+            users: [...state.users, newUserFromApi],
+          }));
+
+          return newUserFromApi;
+
+        } catch (error) {
+          console.error("[Store Action] Error in addUser action:", error);
+          throw error;
+        }
       },
 
-      updateUser: (id: string, user: Partial<User>) => {
-        console.warn("updateUser currently only updates local state. API call needed.");
-        set((state) => ({
-          users: state.users.map((u) => (u.id === id ? { ...u, ...user } : u)),
-        }))
+      updateUser: async (id: string, userUpdateData: Partial<User>): Promise<User> => {
+         // --- TODO: Implement API call for updateUser ---
+         console.warn("updateUser currently only updates local state. API call needed.");
+         // Steps:
+         // 1. Make fetch PUT request to /api/users/{id} with userUpdateData
+         // 2. Handle response (check if ok, handle errors)
+         // 3. Parse updated user from response body
+         // 4. Update state using set() with the data received from API
+         // 5. Return updated user object from API
+         // 6. Handle password updates securely (likely separate endpoint/process)
+
+         // Temporary local update (replace with API logic)
+         set((state) => ({
+           users: state.users.map((u) => (u.id === id ? { ...u, ...userUpdateData } : u)),
+         }));
+         const updatedUser = get().users.find(u => u.id === id);
+         if (!updatedUser) throw new Error("User not found after local update attempt.");
+         return updatedUser;
       },
 
       getUsersByCustomerId: (customerId: string) => {
@@ -409,24 +425,11 @@ export const useStore = create<StoreState>()(
       storage: createJSONStorage(() => localStorage),
       // Define which parts of the state should be persisted
       partialize: (state) => ({
-        // Persist only things that make sense to keep across sessions
-        // Avoid persisting large lists if they are always fetched from API on load
         currentCustomerId: state.currentCustomerId,
-        // customers: state.customers, // Decide if you want to persist these
-        // purchaseOrders: state.purchaseOrders,
-        // servers: state.servers,
-        // users: state.users,
       }),
-      // Custom replacer/reviver for Date objects if persisting lists containing them
-      // storage: createJSONStorage(() => localStorage, {
-      //   reviver: (key, value) => {
-      //     // Example: Revive date strings back to Date objects
-      //     if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(value)) {
-      //       return new Date(value);
-      //     }
-      //     return value;
-      //   },
-      // }),
     }
   )
 )
+
+// --- Export types if not already done in types.ts ---
+export type { StoreState, Customer, PurchaseOrder, Server, User, License, AddCustomerInput, AddPurchaseOrderInput, AddServerInput, AddUserInput };

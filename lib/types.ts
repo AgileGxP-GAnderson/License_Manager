@@ -20,6 +20,7 @@ export interface User {
   username: string
   password: string
   email: string
+  isActive: boolean
 }
 
 export interface Server {

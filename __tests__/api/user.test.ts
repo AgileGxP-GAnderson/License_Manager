@@ -34,9 +34,9 @@ async function createCustomerViaApi(data: Partial<CustomerInput>): Promise<Custo
 
 // Helper to create a user via API
 async function createUserViaApi(data: Partial<UserInput>): Promise<UserOutput> {
-     const passwordString = data.passwordEncrypted instanceof Buffer
-        ? data.passwordEncrypted.toString('utf8')
-        : data.passwordEncrypted || 'defaultPassword';
+     const passwordString = data.password instanceof Buffer
+        ? data.password.toString('utf8')
+        : data.password || 'defaultPassword';
     const finalPasswordString = typeof passwordString === 'string' ? passwordString : 'defaultPassword';
     const passwordInput = Buffer.from(finalPasswordString).toString('base64');
 
@@ -44,7 +44,7 @@ async function createUserViaApi(data: Partial<UserInput>): Promise<UserOutput> {
         ...data,
         login: data.login || faker.internet.userName() + `-${Date.now()}`,
         email: data.email || faker.internet.email(), // Use standard faker email
-        passwordEncrypted: passwordInput
+        password: passwordInput
     };
     const req = createMockNextRequest({ method: 'POST', body: apiData });
     const response = await usersRoute.POST(req);
@@ -87,7 +87,7 @@ describe('User API Routes', () => {
         lastName: faker.person.lastName(),
         login: faker.internet.userName() + `-${Date.now()}`, // Ensure unique
         email: faker.internet.email(), // Use standard faker email
-        passwordEncrypted: Buffer.from(faker.internet.password()).toString('base64'),
+        password: Buffer.from(faker.internet.password()).toString('base64'),
         isActive: true,
       };
 
@@ -100,7 +100,7 @@ describe('User API Routes', () => {
       expect(json.firstName).toBe(newUserData.firstName);
       expect(json.login).toBe(newUserData.login);
       expect(json.customerId).toBe(testCustomer.id);
-      expect(json).not.toHaveProperty('passwordEncrypted');
+      expect(json).not.toHaveProperty('password');
 
       // Verify in DB
       const userInDb = await db.User.findByPk(json.id);
@@ -122,7 +122,7 @@ describe('User API Routes', () => {
             lastName: faker.person.lastName(),
             login: faker.internet.userName() + `-${Date.now()}`,
             email: faker.internet.email(),
-            passwordEncrypted: Buffer.from(faker.internet.password()).toString('base64'),
+            password: Buffer.from(faker.internet.password()).toString('base64'),
             isActive: true,
         };
         const req = createMockNextRequest({ method: 'POST', body: userData });
@@ -135,11 +135,11 @@ describe('User API Routes', () => {
         const uniqueLogin = `userlogin-${Date.now()}`;
         const user1 = await createUserViaApi({
             customerId: testCustomer.id, firstName: 'Existing', lastName: 'User', login: uniqueLogin,
-            email: faker.internet.email(), passwordEncrypted: Buffer.from('password'), isActive: true
+            email: faker.internet.email(), password: Buffer.from('password'), isActive: true
         });
         const duplicateData = {
             customerId: testCustomer.id, firstName: 'New', lastName: 'Person', login: user1.login, // Duplicate login
-            email: faker.internet.email(), passwordEncrypted: Buffer.from('password').toString('base64'), isActive: true
+            email: faker.internet.email(), password: Buffer.from('password').toString('base64'), isActive: true
         };
         const req = createMockNextRequest({ method: 'POST', body: duplicateData });
         const response = await usersRoute.POST(req);
@@ -150,8 +150,8 @@ describe('User API Routes', () => {
   // --- Test GET /api/users ---
   describe('GET /api/users', () => {
      it('should return a list containing created users', async () => {
-        const user1 = await createUserViaApi({ customerId: testCustomer.id, firstName: 'ListUser1', lastName: 'Test', login: `listU1-${Date.now()}`, email: faker.internet.email(), passwordEncrypted: Buffer.from('pw1'), isActive: true });
-        const user2 = await createUserViaApi({ customerId: testCustomer.id, firstName: 'ListUser2', lastName: 'Test', login: `listU2-${Date.now()}`, email: faker.internet.email(), passwordEncrypted: Buffer.from('pw2'), isActive: false });
+        const user1 = await createUserViaApi({ customerId: testCustomer.id, firstName: 'ListUser1', lastName: 'Test', login: `listU1-${Date.now()}`, email: faker.internet.email(), password: Buffer.from('pw1'), isActive: true });
+        const user2 = await createUserViaApi({ customerId: testCustomer.id, firstName: 'ListUser2', lastName: 'Test', login: `listU2-${Date.now()}`, email: faker.internet.email(), password: Buffer.from('pw2'), isActive: false });
 
         const req = createMockNextRequest({ method: 'GET' });
         const response = await usersRoute.GET(req);
@@ -163,7 +163,7 @@ describe('User API Routes', () => {
         expect(responseUsers.some((u) => u.id === user1.id)).toBe(true);
         expect(responseUsers.some((u) => u.id === user2.id)).toBe(true);
         if (responseUsers.length > 0) {
-            expect(responseUsers[0]).not.toHaveProperty('passwordEncrypted');
+            expect(responseUsers[0]).not.toHaveProperty('password');
         }
      });
   });
@@ -171,7 +171,7 @@ describe('User API Routes', () => {
   // --- Test GET /api/users/:id ---
   describe('GET /api/users/:id', () => {
     it('should return a specific user if found', async () => {
-        const user = await createUserViaApi({ customerId: testCustomer.id, firstName: 'FetchUser', lastName: 'Test', login: `fetchU-${Date.now()}`, email: faker.internet.email(), passwordEncrypted: Buffer.from('pw'), isActive: true });
+        const user = await createUserViaApi({ customerId: testCustomer.id, firstName: 'FetchUser', lastName: 'Test', login: `fetchU-${Date.now()}`, email: faker.internet.email(), password: Buffer.from('pw'), isActive: true });
         const req = createMockNextRequest({ method: 'GET' });
         const context = { params: { id: user.id.toString() } };
 
@@ -182,7 +182,7 @@ describe('User API Routes', () => {
         expect(json.id).toBe(user.id);
         expect(json.login).toBe(user.login);
         expect(json.customerId).toBe(testCustomer.id);
-        expect(json).not.toHaveProperty('passwordEncrypted');
+        expect(json).not.toHaveProperty('password');
     });
 
      it('should return 404 if user not found', async () => {
@@ -196,7 +196,7 @@ describe('User API Routes', () => {
    // --- Test PUT /api/users/:id ---
    describe('PUT /api/users/:id', () => {
         it('should update an existing user', async () => {
-            const user = await createUserViaApi({ customerId: testCustomer.id, firstName: 'UpdateUser', lastName: 'Old', login: `updateU-${Date.now()}`, email: faker.internet.email(), passwordEncrypted: Buffer.from('pw'), isActive: true });
+            const user = await createUserViaApi({ customerId: testCustomer.id, firstName: 'UpdateUser', lastName: 'Old', login: `updateU-${Date.now()}`, email: faker.internet.email(), password: Buffer.from('pw'), isActive: true });
             const updateData = { lastName: 'New', isActive: false };
 
             const req = createMockNextRequest({ method: 'PUT', body: updateData });
@@ -208,7 +208,7 @@ describe('User API Routes', () => {
             expect(json.id).toBe(user.id);
             expect(json.lastName).toBe(updateData.lastName);
             expect(json.isActive).toBe(updateData.isActive);
-            expect(json).not.toHaveProperty('passwordEncrypted');
+            expect(json).not.toHaveProperty('password');
 
             // Verify update in DB
             const updatedUserDb = await db.User.findByPk(user.id);
@@ -220,7 +220,7 @@ describe('User API Routes', () => {
     // --- Test DELETE /api/users/:id ---
     describe('DELETE /api/users/:id', () => {
         it('should delete an existing user', async () => {
-            const user = await createUserViaApi({ customerId: testCustomer.id, firstName: 'DeleteUser', lastName: 'Test', login: `deleteU-${Date.now()}`, email: faker.internet.email(), passwordEncrypted: Buffer.from('pw'), isActive: true });
+            const user = await createUserViaApi({ customerId: testCustomer.id, firstName: 'DeleteUser', lastName: 'Test', login: `deleteU-${Date.now()}`, email: faker.internet.email(), password: Buffer.from('pw'), isActive: true });
             const userId = user.id;
 
             const req = createMockNextRequest({ method: 'DELETE' });

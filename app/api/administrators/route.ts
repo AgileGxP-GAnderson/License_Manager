@@ -9,9 +9,9 @@ export async function GET(request: NextRequest) {
     // Adapted from getAllAdministrators
     const administrators = await db.Administrator.findAll();
 
-    // Omit passwordEncrypted from the response
+    // Omit password from the response
     const safeAdmins = administrators.map(admin => {
-        const { passwordEncrypted, ...rest } = admin.get({ plain: true });
+        const { password, ...rest } = admin.get({ plain: true });
         return rest;
     });
 
@@ -27,30 +27,30 @@ export async function POST(request: NextRequest) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
         const body: AdministratorInput = await request.json();
-        const { firstName, lastName, login, email, passwordEncrypted, isActive } = body;
+        const { firstName, lastName, login, email, password, isActive } = body;
 
         // Basic validation (adapted from createAdministrator)
-        if (!firstName || !lastName || !login || !email || !passwordEncrypted || isActive === undefined) {
+        if (!firstName || !lastName || !login || !email || !password || isActive === undefined) {
             return new NextResponse('Missing required administrator fields', { status: 400 });
         }
 
-        // Note: Handle passwordEncrypted Buffer input (assuming Base64)
+        // Note: Handle password Buffer input (assuming Base64)
         let actualPasswordBuffer: Buffer;
         try {
-            if (typeof passwordEncrypted !== 'string') {
-                throw new Error('passwordEncrypted must be a Base64 string');
+            if (typeof password !== 'string') {
+                throw new Error('password must be a Base64 string');
             }
-            actualPasswordBuffer = Buffer.from(passwordEncrypted, 'base64');
+            actualPasswordBuffer = Buffer.from(password, 'base64');
         } catch (e) {
-            return new NextResponse('Invalid Base64 encoding for passwordEncrypted', { status: 400 });
+            return new NextResponse('Invalid Base64 encoding for password', { status: 400 });
         }
 
-        const createData = { ...body, passwordEncrypted: actualPasswordBuffer };
+        const createData = { ...body, password: actualPasswordBuffer };
 
         const newAdministrator = await db.Administrator.create(createData);
 
-        // Omit passwordEncrypted from the response
-        const { passwordEncrypted: _, ...safeNewAdmin } = newAdministrator.get({ plain: true });
+        // Omit password from the response
+        const { password: _, ...safeNewAdmin } = newAdministrator.get({ plain: true });
         return NextResponse.json(safeNewAdmin, { status: 201 });
 
     } catch (error: any) {

@@ -6,7 +6,7 @@ interface AdministratorAttributes {
   firstName: string;
   lastName: string;
   login: string;
-  passwordEncrypted: Buffer; // Using Buffer for bytea -> BLOB
+  password: Buffer; // Using Buffer for bytea -> BLOB
   isActive: boolean;
   email: string;
   createdAt?: Date;
@@ -25,7 +25,7 @@ class Administrator extends Model<AdministratorAttributes, AdministratorInput> i
   public firstName!: string;
   public lastName!: string;
   public login!: string;
-  public passwordEncrypted!: Buffer;
+  public password!: Buffer;
   public isActive!: boolean;
   public email!: string;
 
@@ -54,7 +54,7 @@ class Administrator extends Model<AdministratorAttributes, AdministratorInput> i
           allowNull: false,
           unique: true,
         },
-        passwordEncrypted: {
+        password: {
           type: DataTypes.BLOB,
           allowNull: false,
         },
