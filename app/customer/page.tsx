@@ -218,7 +218,7 @@ export default function CustomerPortal() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-brand-purple">License Manager - Customer Portal</h1>
+        <h1 className="text-3xl font-bold text-brand-purple">Customer Portal - License Manager</h1>
         {/* Display customer info if loaded */}
         {customer ? (
           <div className="mt-2 p-3 border rounded bg-brand-purple/5 border-brand-purple/20">

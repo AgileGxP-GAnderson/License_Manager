@@ -176,7 +176,7 @@ export default function AddCustomerUserPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <h1 className="text-3xl font-bold text-brand-purple">Manage Customer / User</h1>
+      <h1 className="text-3xl font-bold text-brand-purple">Administrator Portal - Manage Customer / User</h1>
 
       {/* --- UPDATE: Display name using selectedCustomerObject --- */}
       {selectedCustomerObject && (

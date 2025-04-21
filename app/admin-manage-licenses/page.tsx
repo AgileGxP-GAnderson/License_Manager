@@ -175,7 +175,7 @@ export default function AdministratorPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-start">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-brand-purple">License Manager - Administrator Portal</h1>
+          <h1 className="text-3xl font-bold text-brand-purple">Administrator Portal - License Manager</h1>
           {/* Display based on initial loading state and customerToDisplay */}
           {isInitialLoading ? (
              <div className="mt-2 p-3 border rounded bg-gray-100 border-gray-200">
