@@ -5,7 +5,7 @@ import { persist, createJSONStorage } from "zustand/middleware"
 import { v4 as uuidv4 } from "uuid"
 import { addYears } from "date-fns"
 // --- Ensure all relevant types are imported ---
-import type { StoreState, Customer, PurchaseOrder, Server, User, License, AddCustomerInput, AddPurchaseOrderInput, AddServerInput, AddUserInput } from "./types"
+import type { StoreState, Customer, PurchaseOrder, Server, User, License } from "./types" // Removed Add...Input types
 
 // Apply persist middleware to store state in localStorage
 export const useStore = create<StoreState>()(
@@ -24,7 +24,7 @@ export const useStore = create<StoreState>()(
       },
 
       // --- Customer Actions ---
-      addCustomer: async (customer: AddCustomerInput): Promise<Customer> => {
+      addCustomer: async (customer: Omit<Customer, 'id'>): Promise<Customer> => {
         console.log('[Store Action] addCustomer called with data:', customer);
         try {
           const response = await fetch('/api/customers', {
@@ -112,7 +112,7 @@ export const useStore = create<StoreState>()(
         return !purchaseOrders.some((po) => po.poNumber === poNumber)
       },
 
-      addPurchaseOrder: async (customerId: string, po: AddPurchaseOrderInput): Promise<string> => { // Return PO ID
+      addPurchaseOrder: async (customerId: string, po: Pick<PurchaseOrder, 'poNumber' | 'purchaseDate' | 'licenses'>): Promise<string> => { // Return PO ID
         console.log('[Store Action] addPurchaseOrder called with customerId:', customerId, 'and data:', po);
 
         const apiPayload = {
@@ -306,7 +306,7 @@ export const useStore = create<StoreState>()(
       },
 
       // --- Server Actions ---
-      addServer: (server: AddServerInput) => {
+      addServer: (server: Omit<Server, 'id'>) => {
         // --- TODO: Implement API call for addServer ---
         console.warn("addServer currently only updates local state. API call needed.");
         const id = uuidv4()
@@ -328,7 +328,7 @@ export const useStore = create<StoreState>()(
       },
 
       // --- User Actions ---
-      addUser: async (user: AddUserInput & { password?: string }): Promise<User> => {
+      addUser: async (user: Omit<User, 'id' | 'customerId'> & { password?: string }): Promise<User> => {
         console.log('[Store Action] addUser called with initial data:', user);
 
         // --- Get currentCustomerId from store state ---
@@ -419,6 +419,33 @@ export const useStore = create<StoreState>()(
         const { users } = get()
         return !users.some((user) => user.username.toLowerCase() === username.toLowerCase())
       },
+
+      // Action to fetch from API
+      getUsers: async (customerId: string): Promise<void> => {
+        if (!customerId) { /* ... handle missing ID ... */ return; }
+        console.log(`[Store Action] getUsers called for customer ${customerId}`);
+        try {
+          const apiUrl = `/api/customers/${encodeURIComponent(customerId)}/users`;
+          const response = await fetch(apiUrl);
+          if (!response.ok) { /* ... handle error ... */ throw new Error(/*...*/); }
+          const fetchedUsers: User[] = await response.json();
+          console.log(`[Store Action] Received users for customer ${customerId} from API:`, fetchedUsers);
+          set((state) => ({
+            users: [
+              ...state.users.filter(u => u.customerId !== customerId),
+              ...fetchedUsers
+            ]
+          }));
+        } catch (error) { /* ... handle error ... */ throw error; }
+      },
+
+      // Selector to filter state
+      getUsersByCustomerId: (customerId: string) => {
+        const { users } = get();
+        // Ensure comparison is correct (string vs number if applicable)
+        // Assuming user.customerId is stored consistently (e.g., always string or always number)
+        return users.filter((user) => String(user.customerId) === String(customerId));
+      },
     }),
     {
       name: 'license-manager-storage', // unique name for localStorage
@@ -432,4 +459,4 @@ export const useStore = create<StoreState>()(
 )
 
 // --- Export types if not already done in types.ts ---
-export type { StoreState, Customer, PurchaseOrder, Server, User, License, AddCustomerInput, AddPurchaseOrderInput, AddServerInput, AddUserInput };
+export type { StoreState, Customer, PurchaseOrder, Server, User, License }; // Removed Add...Input types
