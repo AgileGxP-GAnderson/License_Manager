@@ -45,7 +45,7 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
     defaultValues: {
       firstName: initialData?.firstName ?? "",
       lastName: initialData?.lastName ?? "",
-      login: initialData?.username ?? "",
+      login: initialData?.login ?? "",
       email: initialData?.email ?? "",
       password: "", // Always clear password field on load
       // --- Set default for isActive ---
@@ -59,7 +59,7 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
       form.reset({
         firstName: initialData.firstName ?? "",
         lastName: initialData.lastName ?? "",
-        login: initialData.username ?? "",
+        login: initialData.login ?? "",
         email: initialData.email ?? "",
         password: "", // Don't repopulate password
         isActive: initialData.isActive ?? true,
