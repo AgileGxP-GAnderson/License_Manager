@@ -112,7 +112,7 @@ export const useStore = create<StoreState>()(
         return !purchaseOrders.some((po) => po.poNumber === poNumber)
       },
 
-      addPurchaseOrder: async (customerId: string, po: Pick<PurchaseOrder, 'poNumber' | 'purchaseDate' | 'licenses'>): Promise<string> => { // Return PO ID
+      addPurchaseOrder: async (customerId: string, po: Pick<PurchaseOrder, 'poNumber' | 'purchaseDate' | 'licenses'>): Promise<PurchaseOrder> => { // Return PO ID
         console.log('[Store Action] addPurchaseOrder called with customerId:', customerId, 'and data:', po);
 
         const apiPayload = {
@@ -164,7 +164,7 @@ export const useStore = create<StoreState>()(
             purchaseOrders: [...state.purchaseOrders, processedPO],
           }));
 
-          return processedPO.id;
+          return processedPO;
 
         } catch (error) {
           console.error('[Store Action] Error during addPurchaseOrder fetch:', error);
@@ -172,26 +172,31 @@ export const useStore = create<StoreState>()(
         }
       },
 
-      updatePurchaseOrder: (id: string, po: Partial<PurchaseOrder>) => {
-        console.warn("updatePurchaseOrder currently only updates local state. API call needed.");
-        set((state) => ({
-          purchaseOrders: state.purchaseOrders.map((p) =>
-            p.id === id
-              ? {
-                  ...p,
-                  ...po,
-                  purchaseDate: po.purchaseDate ? new Date(po.purchaseDate) : p.purchaseDate,
-                  licenses: po.licenses
-                    ? po.licenses.map((license) => ({
-                        ...license,
-                        activationDate: license.activationDate ? new Date(license.activationDate) : undefined,
-                        expirationDate: license.expirationDate ? new Date(license.expirationDate) : null,
-                      }))
-                    : p.licenses,
-                }
-              : p,
-          ),
-        }))
+      updatePurchaseOrder: async (id: string, poUpdateData: Partial<PurchaseOrder>): Promise<PurchaseOrder> => {
+        console.log(`[Store Action] updatePurchaseOrder called for ID: ${id}`, poUpdateData);
+        try {
+          const response = await fetch(`/api/purchase-orders/${encodeURIComponent(id)}`, { // Assuming this is the update endpoint
+            method: 'PUT', // Or PATCH
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(poUpdateData),
+          });
+           if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`[Store Action] API Error updating PO ${id}:`, response.status, errorBody);
+            throw new Error(`Failed to update purchase order: ${response.statusText} - ${errorBody}`);
+          }
+          const updatedPoFromApi: PurchaseOrder = await response.json();
+           console.log(`[Store Action] Received updated PO ${id} from API:`, updatedPoFromApi);
+           set((state) => ({
+            purchaseOrders: state.purchaseOrders.map((po) =>
+              String(po.id) === String(id) ? { ...po, ...updatedPoFromApi } : po
+            ),
+          }), false, 'updatePurchaseOrder');
+          return updatedPoFromApi;
+        } catch (error) {
+           console.error(`[Store Action] Error in updatePurchaseOrder action for ID ${id}:`, error);
+           throw error;
+        }
       },
 
       getPurchaseOrdersByCustomerId: (customerId: string) => {
@@ -519,6 +524,41 @@ export const useStore = create<StoreState>()(
         }
       },
       // --- End User Fetch Action ---
+
+      // --- Action to fetch POs for a specific customer ---
+      fetchPurchaseOrdersForCustomer: async (customerId: string): Promise<void> => {
+        console.log(`[Store Action] fetchPurchaseOrdersForCustomer called for customer ${customerId}`);
+        // Optional: Set loading state if you add one to the store
+        // set({ isLoadingPurchaseOrders: true });
+        try {
+          const response = await fetch(`/api/customers/${encodeURIComponent(customerId)}/purchase-orders`);
+          if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`[Store Action] API Error fetching POs for customer ${customerId}:`, response.status, errorBody);
+            throw new Error(`Failed to fetch purchase orders: ${response.statusText} - ${errorBody}`);
+          }
+          const fetchedPOs: PurchaseOrder[] = await response.json();
+          console.log(`[Store Action] Received ${fetchedPOs.length} POs for customer ${customerId} from API`);
+
+          // Merge fetched POs into the main state, replacing old ones for this customer
+          set((state) => {
+            // Filter out existing POs belonging to the current customer
+            const otherPOs = state.purchaseOrders.filter(po => String(po.customerId) !== String(customerId));
+            // Combine the other POs with the newly fetched ones
+            return { purchaseOrders: [...otherPOs, ...fetchedPOs] };
+          }, false, 'fetchPurchaseOrdersForCustomer');
+
+        } catch (error) {
+          console.error(`[Store Action] Error in fetchPurchaseOrdersForCustomer action for ${customerId}:`, error);
+          // Optional: Set error state in store
+          // set({ purchaseOrdersError: error.message });
+          throw error; // Re-throw so the component can catch it
+        } finally {
+          // Optional: Clear loading state
+          // set({ isLoadingPurchaseOrders: false });
+        }
+      },
+      // --- End fetchPurchaseOrdersForCustomer ---
 
     }),
     {
