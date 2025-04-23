@@ -76,7 +76,7 @@ export default function UserList({ users, customerId /*, onEditUser, onDeleteUse
               <TableHeader className="bg-brand-purple/5">
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Username</TableHead>
+                  <TableHead>Login</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -87,7 +87,7 @@ export default function UserList({ users, customerId /*, onEditUser, onDeleteUse
                 {users.map((user) => (
                   <TableRow key={user.id} className="hover:bg-brand-purple/5">
                     <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
-                    <TableCell>{user.username}</TableCell>
+                    <TableCell>{user.login}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
                        <Badge variant={user.isActive ? "success" : "destructive"}>

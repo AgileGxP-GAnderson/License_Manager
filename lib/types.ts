@@ -17,7 +17,7 @@ export interface User {
   customerId: string
   firstName: string
   lastName: string
-  username: string
+  login: string
   password: string
   email: string
   isActive: boolean
@@ -58,30 +58,34 @@ export interface StoreState {
   currentCustomer: Customer | null
 
   // Actions
-  addCustomer: (customer: Omit<Customer, "id">) => Promise<string>;
-  updateCustomer: (id: string, customer: Partial<Customer>) => void
+  addCustomer: (customer: Omit<Customer, "id">) => Promise<string>; // Assuming returns ID now
+  updateCustomer: (id: string, customer: Partial<Customer>) => Promise<Customer>; // Assuming async
   setCurrentCustomer: (id: string | null) => void
-  searchCustomers: (query: string) => Customer[]
+  searchCustomers: (query: string) => Customer[]; // Assuming local search
 
   addPurchaseOrder: (customerId: string, po: Omit<PurchaseOrder, "id" | "customerId">) => Promise<string>;
-  updatePurchaseOrder: (id: string, po: Partial<Omit<PurchaseOrder, "id" | "customerId">>) => void
+  updatePurchaseOrder: (id: string, po: Partial<Omit<PurchaseOrder, "id" | "customerId">>) => Promise<void>; // Assuming async
   getPurchaseOrdersByCustomerId: (customerId: string) => PurchaseOrder[]
 
   // License actions
-  updateLicense: (poId: string, licenseIndex: number, licenseData: Partial<License>) => void
-  requestLicenseActivation: (poId: string, licenseIndex: number, serverId: string) => void
-  activateLicense: (poId: string, licenseIndex: number) => void
-  deactivateLicense: (poId: string, licenseIndex: number) => void
+  updateLicense: (poId: string, licenseIndex: number, licenseData: Partial<License>) => Promise<void>; // Assuming async
+  requestLicenseActivation: (poId: string, licenseIndex: number, serverId: string) => Promise<void>; // Assuming async
+  activateLicense: (poId: string, licenseIndex: number) => Promise<void>; // Assuming async
+  deactivateLicense: (poId: string, licenseIndex: number) => Promise<void>; // Assuming async
   isPONumberUnique: (poNumber: string) => boolean
 
   // Server actions
-  addServer: (server: Omit<Server, "id">) => string
+  addServer: (server: Omit<Server, "id">) => Promise<Server>; // Assuming async, returns Server
   getServersByCustomerId: (customerId: string) => Server[]
-  getServerById: (id: string) => Server | undefined
+  getServerById: (id: string) => Server | null; // Changed undefined to null for consistency
 
   // User actions
-  addUser: (user: Omit<User, "id">) => string
-  updateUser: (id: string, user: Partial<User>) => void
-  getUsersByCustomerId: (customerId: string) => User[]
+  addUser: (user: Omit<User, "id">) => Promise<User>; // Assuming async, returns User
+  updateUser: (id: string, user: Partial<User>) => Promise<User>; // Assuming async
+  // --- Selector to get users for a customer ---
+  getUsersByCustomerId: (customerId: string) => User[];
+  // --- Action to fetch users for a customer ---
+  fetchUsersForCustomer: (customerId: string) => Promise<void>; // Renamed for clarity
+
   isUsernameUnique: (username: string) => boolean
 }

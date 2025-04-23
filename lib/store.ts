@@ -417,11 +417,11 @@ export const useStore = create<StoreState>()(
       isUsernameUnique: (username: string) => {
         // Note: Checks local state. A database check via API is more reliable.
         const { users } = get()
-        return !users.some((user) => user.username.toLowerCase() === username.toLowerCase())
+        return !users.some((user) => user.login.toLowerCase() === username.toLowerCase())
       },
 
       // Action to fetch from API
-      getUsers: async (customerId: string): Promise<void> => {
+      fetchUsers: async (customerId: string): Promise<void> => {
         if (!customerId) { /* ... handle missing ID ... */ return; }
         console.log(`[Store Action] getUsers called for customer ${customerId}`);
         try {
@@ -446,6 +446,58 @@ export const useStore = create<StoreState>()(
         // Assuming user.customerId is stored consistently (e.g., always string or always number)
         return users.filter((user) => String(user.customerId) === String(customerId));
       },
+
+      // --- User Selector Implementation ---
+      getUsersByCustomerId: (customerId: string): User[] => {
+        const { users } = get();
+        if (!customerId) return [];
+        // Ensure consistent comparison (e.g., both as strings)
+        return users.filter((user) => String(user.customerId) === String(customerId));
+      },
+      // --- End User Selector ---
+
+      // --- User Fetch Action Implementation ---
+      fetchUsersForCustomer: async (customerId: string): Promise<void> => {
+        if (!customerId) {
+          console.warn("[Store Action] fetchUsersForCustomer called with no customerId.");
+          // Optionally clear users for the non-existent/cleared customer ID if needed
+          // set((state) => ({ users: state.users.filter(u => String(u.customerId) !== 'null' && String(u.customerId) !== 'undefined') }));
+          return;
+        }
+        console.log(`[Store Action] fetchUsersForCustomer called for customer ${customerId}`);
+        try {
+          const apiUrl = `/api/customers/${encodeURIComponent(customerId)}/users`;
+          const response = await fetch(apiUrl);
+
+          console.log(`[Store Action] fetchUsers API response status for customer ${customerId}:`, response.status);
+
+          if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`[Store Action] API Error getting users for customer ${customerId}:`, response.status, errorBody);
+            throw new Error(`Failed to fetch users: ${response.statusText} - ${errorBody}`);
+          }
+
+          const fetchedUsers: User[] = await response.json();
+          console.log(`[Store Action] Received users for customer ${customerId} from API:`, fetchedUsers);
+
+          // Update state: Replace users for this customer, keep others
+          set((state) => ({
+            users: [
+              // Keep users from other customers
+              ...state.users.filter(u => String(u.customerId) !== String(customerId)),
+              // Add/replace users for the current customer (ensure they have customerId)
+              ...fetchedUsers.map(u => ({ ...u, customerId: String(customerId) })) // Ensure customerId consistency if needed
+            ]
+          }), false, 'fetchUsersForCustomer'); // Added action name for debugging
+
+        } catch (error) {
+          console.error(`[Store Action] Error in fetchUsersForCustomer action for customer ${customerId}:`, error);
+          // Re-throw the error so the component can catch it
+          throw error;
+        }
+      },
+      // --- End User Fetch Action ---
+
     }),
     {
       name: 'license-manager-storage', // unique name for localStorage
