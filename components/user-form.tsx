@@ -40,17 +40,22 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!initialData;
 
+  // --- Explicitly define defaultValues with the FormValues type ---
+  const defaultFormValues: FormValues = {
+    firstName: initialData?.firstName ?? "",
+    lastName: initialData?.lastName ?? "",
+    login: initialData?.login ?? "",
+    email: initialData?.email ?? "",
+    password: "", // Always clear password field on load
+    isActive: initialData?.isActive ?? true, // Default to true if adding new
+  };
+  // --- End explicit definition ---
+
   const form = useForm<FormValues>({
     resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      firstName: initialData?.firstName ?? "",
-      lastName: initialData?.lastName ?? "",
-      login: initialData?.login ?? "",
-      email: initialData?.email ?? "",
-      password: "", // Always clear password field on load
-      // --- Set default for isActive ---
-      isActive: initialData?.isActive ?? true, // Default to true if adding new
-    },
+    // --- Use the explicitly typed default values object ---
+    defaultValues: defaultFormValues,
+    // --- End change ---
   });
 
   // Reset form effect (similar to CustomerForm)

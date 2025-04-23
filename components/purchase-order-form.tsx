@@ -161,7 +161,8 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar selected={field.value} onSelect={field.onChange} />
+                    {/* Changed selected to value */}
+                    <Calendar value={field.value} onChange={field.onChange} />
                   </PopoverContent>
                 </Popover>
                 <FormMessage />
@@ -294,7 +295,8 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                           {/* Calendar might not be needed here if disabled */}
-                          <Calendar selected={field.value} onSelect={field.onChange} />
+                          {/* Changed selected to value */}
+                          <Calendar value={field.value} onChange={field.onChange} />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -329,7 +331,8 @@ export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: P
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
                             {/* Calendar might not be needed here if disabled */}
-                            <Calendar selected={field.value} onSelect={field.onChange}  />
+                            {/* Changed selected to value */}
+                            <Calendar value={field.value} onChange={field.onChange}  />
                           </PopoverContent>
                         </Popover>
                         <FormMessage />

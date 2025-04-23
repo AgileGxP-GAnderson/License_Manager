@@ -1,8 +1,15 @@
 "use client"
 
+// --- Import SyntheticEvent ---
 import * as React from "react"
+import { SyntheticEvent } from "react" // Import SyntheticEvent
+// --- End Import ---
 import { ChevronLeft, ChevronRight } from "lucide-react"
+// --- Remove Locale from this import ---
 import DatePicker, { registerLocale } from "react-datepicker"
+// --- Import Locale from date-fns ---
+import { Locale } from "date-fns"
+// --- Import the specific locale object ---
 import { enUS } from "date-fns/locale"
 import "react-datepicker/dist/react-datepicker.css"
 
@@ -12,36 +19,48 @@ import { buttonVariants } from "@/components/ui/button"
 // Register the locale
 registerLocale("en-US", enUS)
 
-// Define your own type based on DatePicker component props
-type DatePickerPropsType = React.ComponentProps<typeof DatePicker>
-
-export type CalendarProps = DatePickerPropsType & {
-  value?: Date | null
-  onChange?: (date: Date | null) => void
-  className?: string
+// --- Define simpler props specific to this Calendar component ---
+export type CalendarProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange' | 'value'> & {
+  value?: Date | null;
+  onChange?: (date: Date | null) => void; // Expect single date or null
+  locale?: Locale; // Allow passing locale (Type comes from date-fns)
+  // Add other specific DatePicker props you might need to pass through
+  minDate?: Date;
+  maxDate?: Date;
+  disabled?: boolean;
+  // Include other props from DatePickerPropsType if explicitly needed
 }
+// --- End simpler props definition ---
 
 function Calendar({
   value,
-  onChange,
+  onChange, // This is the function passed from the parent
   className,
-  ...props
+  locale = enUS, // Default locale (Object comes from date-fns/locale)
+  ...props // Capture remaining props
 }: CalendarProps) {
+
+  // --- Destructure potentially conflicting props ---
+  // Cast props to any to safely access selectsRange if it exists
+  const { selectsRange, ...restProps } = props as any;
+  // --- End destructuring ---
+
   return (
     <div className={cn("p-3", className)}>
       <DatePicker
         selected={value}
-        onChange={(date: Date[] | null, event) => {
-          if (Array.isArray(date) && date.length === 2) {
-            const [start] = date;
-            onChange?.(start);
-          } else if (!Array.isArray(date)) {
-            onChange?.(date);
-          }
+        // --- Add type annotation for event ---
+        onChange={(date: Date | null, event: SyntheticEvent<any> | undefined) => {
+        // --- End type annotation ---
+          // Call the onChange passed from the parent with the received date
+          onChange?.(date);
         }}
-        locale="en-US"
+        locale={locale} // Use the passed or default locale
         inline
         calendarClassName="border-none shadow-none"
+        // --- Explicitly set selectsRange to false ---
+        selectsRange={false}
+        // --- End explicit set ---
         renderCustomHeader={({
           date,
           decreaseMonth,
@@ -49,6 +68,7 @@ function Calendar({
           prevMonthButtonDisabled,
           nextMonthButtonDisabled,
         }) => (
+          // ... custom header JSX (remains the same) ...
           <div className="flex items-center justify-between px-2 py-1">
             <button
               type="button"
@@ -63,11 +83,9 @@ function Calendar({
               <ChevronLeft className="h-4 w-4" />
               <span className="sr-only">Previous month</span>
             </button>
-            
             <div className="text-sm font-medium">
               {date.toLocaleString("default", { month: "long", year: "numeric" })}
             </div>
-            
             <button
               type="button"
               onClick={increaseMonth}
@@ -83,13 +101,15 @@ function Calendar({
             </button>
           </div>
         )}
-        dayClassName={() => 
+        dayClassName={() =>
           cn(
             buttonVariants({ variant: "ghost" }),
             "h-9 w-9 p-0 font-normal"
           )
         }
-        {...props}
+        // --- Spread only the REST of the props ---
+        {...restProps}
+        // --- End spread ---
       />
     </div>
   )
