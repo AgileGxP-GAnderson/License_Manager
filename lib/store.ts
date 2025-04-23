@@ -390,23 +390,45 @@ export const useStore = create<StoreState>()(
       },
 
       updateUser: async (id: string, userUpdateData: Partial<User>): Promise<User> => {
-         // --- TODO: Implement API call for updateUser ---
-         console.warn("updateUser currently only updates local state. API call needed.");
-         // Steps:
-         // 1. Make fetch PUT request to /api/users/{id} with userUpdateData
-         // 2. Handle response (check if ok, handle errors)
-         // 3. Parse updated user from response body
-         // 4. Update state using set() with the data received from API
-         // 5. Return updated user object from API
-         // 6. Handle password updates securely (likely separate endpoint/process)
+        console.log(`[Store Action] updateUser called for ID: ${id}`, userUpdateData);
+        try {
+          // 1. Make API Call (Adjust URL and method as needed)
+          const response = await fetch(`/api/users/${encodeURIComponent(id)}`, {
+            method: 'PUT', // Or PATCH
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userUpdateData),
+          });
 
-         // Temporary local update (replace with API logic)
-         set((state) => ({
-           users: state.users.map((u) => (u.id === id ? { ...u, ...userUpdateData } : u)),
-         }));
-         const updatedUser = get().users.find(u => u.id === id);
-         if (!updatedUser) throw new Error("User not found after local update attempt.");
-         return updatedUser;
+          console.log(`[Store Action] updateUser API response status for ID ${id}:`, response.status);
+
+          // 3. Handle the Response
+          if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`[Store Action] API Error updating user ${id}:`, response.status, errorBody);
+            throw new Error(`Failed to update user: ${response.statusText} - ${errorBody}`);
+          }
+
+          // 4. Parse the Updated User
+          const updatedUserFromApi: User = await response.json();
+          console.log(`[Store Action] Received updated user ${id} from API:`, updatedUserFromApi);
+
+          // 5. Update Store State
+          set((state) => ({
+            users: state.users.map((user) =>
+              String(user.id) === String(id) ? { ...user, ...updatedUserFromApi } : user // Replace the old user with the updated one
+            ),
+          }), false, 'updateUser'); // Added action name for debugging
+
+          // 6. Return Updated User
+          return updatedUserFromApi;
+
+        } catch (error) {
+          console.error(`[Store Action] Error in updateUser action for ID ${id}:`, error);
+          // Re-throw the error so the component can catch it
+          throw error;
+        }
       },
 
       getUsersByCustomerId: (customerId: string) => {
