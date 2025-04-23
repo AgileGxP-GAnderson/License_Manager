@@ -12,8 +12,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "License Manager",
-  description: "Manage software licenses and customers",
+  title: "Agile License Manager",
+  description: "Manage Agile software licenses",
   icons: {
     icon: "/favicon.svg",
   },
@@ -22,11 +22,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <div className="flex min-h-screen">
