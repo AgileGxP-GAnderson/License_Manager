@@ -110,4 +110,4 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
 }
 
 export default User;
-export type { UserAttributes, UserInput }; // Export types
+export type { UserAttributes}; // Export types

@@ -90,7 +90,8 @@ export default function UserList({ users, customerId /*, onEditUser, onDeleteUse
                     <TableCell>{user.login}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
-                       <Badge variant={user.isActive ? "success" : "destructive"}>
+                       {/* Use "default" for active, "destructive" for inactive */}
+                       <Badge variant={user.isActive ? "default" : "destructive"}>
                          {user.isActive ? 'Active' : 'Inactive'}
                        </Badge>
                     </TableCell>

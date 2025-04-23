@@ -191,7 +191,7 @@ export const useStore = create<StoreState>()(
             purchaseOrders: state.purchaseOrders.map((po) =>
               String(po.id) === String(id) ? { ...po, ...updatedPoFromApi } : po
             ),
-          }), false, 'updatePurchaseOrder');
+          }), false);
           return updatedPoFromApi;
         } catch (error) {
            console.error(`[Store Action] Error in updatePurchaseOrder action for ID ${id}:`, error);
@@ -311,7 +311,8 @@ export const useStore = create<StoreState>()(
       },
 
       // --- Server Actions ---
-      addServer: (server: Omit<Server, 'id'>) => {
+      // Make the function async and return Promise<Server>
+      addServer: async (server: Omit<Server, 'id'>): Promise<Server> => {
         // --- TODO: Implement API call for addServer ---
         console.warn("addServer currently only updates local state. API call needed.");
         const id = uuidv4()
@@ -319,7 +320,8 @@ export const useStore = create<StoreState>()(
         set((state) => ({
           servers: [...state.servers, newServer],
         }))
-        return id // Return temporary ID until API call is implemented
+        // Return the newly created server object wrapped in a resolved Promise
+        return Promise.resolve(newServer);
       },
 
       getServersByCustomerId: (customerId: string) => {
@@ -327,9 +329,11 @@ export const useStore = create<StoreState>()(
         return servers.filter((server) => server.customerId === customerId)
       },
 
-      getServerById: (id: string) => {
+      getServerById: (id: string): Server | null => { // Update return type annotation
         const { servers } = get()
-        return servers.find((server) => server.id === id)
+        const server = servers.find((server) => server.id === id)
+        // Return the found server or null if not found
+        return server || null;
       },
 
       // --- User Actions ---
@@ -424,7 +428,7 @@ export const useStore = create<StoreState>()(
             users: state.users.map((user) =>
               String(user.id) === String(id) ? { ...user, ...updatedUserFromApi } : user // Replace the old user with the updated one
             ),
-          }), false, 'updateUser'); // Added action name for debugging
+          }), false); // Added action name for debugging
 
           // 6. Return Updated User
           return updatedUserFromApi;
@@ -436,42 +440,10 @@ export const useStore = create<StoreState>()(
         }
       },
 
-      getUsersByCustomerId: (customerId: string) => {
-        const { users } = get()
-        return users.filter((user) => user.customerId === customerId)
-      },
-
       isUsernameUnique: (username: string) => {
         // Note: Checks local state. A database check via API is more reliable.
         const { users } = get()
         return !users.some((user) => user.login.toLowerCase() === username.toLowerCase())
-      },
-
-      // Action to fetch from API
-      fetchUsers: async (customerId: string): Promise<void> => {
-        if (!customerId) { /* ... handle missing ID ... */ return; }
-        console.log(`[Store Action] getUsers called for customer ${customerId}`);
-        try {
-          const apiUrl = `/api/customers/${encodeURIComponent(customerId)}/users`;
-          const response = await fetch(apiUrl);
-          if (!response.ok) { /* ... handle error ... */ throw new Error(/*...*/); }
-          const fetchedUsers: User[] = await response.json();
-          console.log(`[Store Action] Received users for customer ${customerId} from API:`, fetchedUsers);
-          set((state) => ({
-            users: [
-              ...state.users.filter(u => u.customerId !== customerId),
-              ...fetchedUsers
-            ]
-          }));
-        } catch (error) { /* ... handle error ... */ throw error; }
-      },
-
-      // Selector to filter state
-      getUsersByCustomerId: (customerId: string) => {
-        const { users } = get();
-        // Ensure comparison is correct (string vs number if applicable)
-        // Assuming user.customerId is stored consistently (e.g., always string or always number)
-        return users.filter((user) => String(user.customerId) === String(customerId));
       },
 
       // --- User Selector Implementation ---
@@ -515,7 +487,7 @@ export const useStore = create<StoreState>()(
               // Add/replace users for the current customer (ensure they have customerId)
               ...fetchedUsers.map(u => ({ ...u, customerId: String(customerId) })) // Ensure customerId consistency if needed
             ]
-          }), false, 'fetchUsersForCustomer'); // Added action name for debugging
+          }), false); // Added action name for debugging
 
         } catch (error) {
           console.error(`[Store Action] Error in fetchUsersForCustomer action for customer ${customerId}:`, error);
@@ -546,7 +518,7 @@ export const useStore = create<StoreState>()(
             const otherPOs = state.purchaseOrders.filter(po => String(po.customerId) !== String(customerId));
             // Combine the other POs with the newly fetched ones
             return { purchaseOrders: [...otherPOs, ...fetchedPOs] };
-          }, false, 'fetchPurchaseOrdersForCustomer');
+          }, false);
 
         } catch (error) {
           console.error(`[Store Action] Error in fetchPurchaseOrdersForCustomer action for ${customerId}:`, error);

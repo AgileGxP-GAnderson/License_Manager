@@ -58,20 +58,21 @@ export interface StoreState {
   currentCustomer: Customer | null
 
   // Actions
-  addCustomer: (customer: Omit<Customer, "id">) => Promise<string>; // Assuming returns ID now
+  addCustomer: (customer: Omit<Customer, "id">) => Promise<Customer>; // Assuming returns ID now
   updateCustomer: (id: string, customer: Partial<Customer>) => Promise<Customer>; // Assuming async
   setCurrentCustomer: (id: string | null) => void
   searchCustomers: (query: string) => Customer[]; // Assuming local search
 
-  addPurchaseOrder: (customerId: string, po: Omit<PurchaseOrder, "id" | "customerId">) => Promise<string>;
-  updatePurchaseOrder: (id: string, po: Partial<Omit<PurchaseOrder, "id" | "customerId">>) => Promise<void>; // Assuming async
+  addPurchaseOrder: (customerId: string, po: Pick<PurchaseOrder, 'poNumber' | 'purchaseDate' | 'licenses'>) => Promise<PurchaseOrder>;
+  updatePurchaseOrder: (id: string, po: Partial<PurchaseOrder>) => Promise<PurchaseOrder>; // Assuming async
   getPurchaseOrdersByCustomerId: (customerId: string) => PurchaseOrder[]
+  fetchPurchaseOrdersForCustomer: (customerId: string) => Promise<void>;
 
   // License actions
-  updateLicense: (poId: string, licenseIndex: number, licenseData: Partial<License>) => Promise<void>; // Assuming async
-  requestLicenseActivation: (poId: string, licenseIndex: number, serverId: string) => Promise<void>; // Assuming async
-  activateLicense: (poId: string, licenseIndex: number) => Promise<void>; // Assuming async
-  deactivateLicense: (poId: string, licenseIndex: number) => Promise<void>; // Assuming async
+  updateLicense: (poId: string, licenseIndex: number, licenseData: Partial<License>) => void; // Changed Promise<License> to void
+  requestLicenseActivation: (poId: string, licenseIndex: number, serverId: string) => void; // Assuming local update only for now
+  activateLicense: (poId: string, licenseIndex: number) => void; // Assuming local update only for now
+  deactivateLicense: (poId: string, licenseIndex: number) => void; // Assuming local update only for now
   isPONumberUnique: (poNumber: string) => boolean
 
   // Server actions
