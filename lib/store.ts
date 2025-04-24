@@ -5,7 +5,16 @@ import { persist, createJSONStorage } from "zustand/middleware"
 import { v4 as uuidv4 } from "uuid"
 import { addYears } from "date-fns"
 // --- Ensure all relevant types are imported ---
-import type { StoreState, Customer, PurchaseOrder, Server, User, License } from "./types" // Removed Add...Input types
+import type { StoreState, Customer, PurchaseOrder, Server, User, License } from "./types"
+
+// Helper function to merge POs (can be defined inside the persist callback)
+const mergePOs = (existingPOs: PurchaseOrder[], newPOs: PurchaseOrder[], customerId: string): PurchaseOrder[] => {
+  // Filter out old POs belonging to this customer
+  const otherCustomerPOs = existingPOs.filter(po => String(po.customerId) !== String(customerId));
+  // Combine with the new POs for this customer
+  return [...otherCustomerPOs, ...newPOs];
+};
+
 
 // Apply persist middleware to store state in localStorage
 export const useStore = create<StoreState>()(
@@ -18,6 +27,7 @@ export const useStore = create<StoreState>()(
       currentCustomerId: null,
 
       get currentCustomer() {
+        // ... existing getter ...
         const { customers, currentCustomerId } = get()
         if (!currentCustomerId) return null
         return customers.find((c) => c.id === currentCustomerId) || null
@@ -29,15 +39,14 @@ export const useStore = create<StoreState>()(
         try {
           const response = await fetch('/api/customers', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(customer),
           });
 
           console.log('[Store Action] addCustomer API response status:', response.status);
 
           if (!response.ok) {
+            // ... existing error handling ...
             const errorBody = await response.text();
             console.error("[Store Action] API Error adding customer:", response.status, errorBody);
             throw new Error(`Failed to add customer: ${response.statusText} - ${errorBody}`);
@@ -46,13 +55,28 @@ export const useStore = create<StoreState>()(
           const savedCustomer: Customer = await response.json();
           console.log('[Store Action] Received new customer from API:', savedCustomer);
 
-          set((state) => ({
-            customers: [...state.customers, savedCustomer],
-          }));
+          set((state) => {
+            // --- Merge POs if they exist on the saved customer ---
+            let updatedPOs = state.purchaseOrders;
+            if (savedCustomer.purchaseOrders && savedCustomer.purchaseOrders.length > 0) {
+              console.log(`[Store Action] Merging ${savedCustomer.purchaseOrders.length} POs from new customer ${savedCustomer.id}`);
+              // Since it's a new customer, we can just add its POs, assuming no overlap yet
+              // A more robust merge might be needed if IDs could somehow clash, but simple concat is likely fine here.
+              // Ensure consistency: filter just in case, then concat
+              updatedPOs = mergePOs(state.purchaseOrders, savedCustomer.purchaseOrders, savedCustomer.id);
+            }
+            // --- End PO Merge ---
+
+            return {
+              customers: [...state.customers, savedCustomer],
+              purchaseOrders: updatedPOs, // Update purchaseOrders state
+            };
+          });
 
           return savedCustomer;
 
         } catch (error) {
+          // ... existing error handling ...
           console.error("[Store Action] Error adding customer:", error);
           throw error;
         }
@@ -63,15 +87,14 @@ export const useStore = create<StoreState>()(
         try {
           const response = await fetch(`/api/customers/${id}`, {
             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(customerUpdateData),
           });
 
           console.log('[Store Action] updateCustomer API response status:', response.status);
 
           if (!response.ok) {
+            // ... existing error handling ...
             const errorBody = await response.text();
             console.error("[Store Action] API Error updating customer:", response.status, errorBody);
             throw new Error(`Failed to update customer: ${response.statusText} - ${errorBody}`);
@@ -80,21 +103,42 @@ export const useStore = create<StoreState>()(
           const updatedCustomerFromServer: Customer = await response.json();
           console.log('[Store Action] Received updated customer from API:', updatedCustomerFromServer);
 
-          set((state) => ({
-            customers: state.customers.map((c) =>
-              c.id === id ? { ...c, ...updatedCustomerFromServer } : c
-            ),
-          }));
+          set((state) => {
+            // --- Merge POs if they exist on the updated customer ---
+            let updatedPOs = state.purchaseOrders;
+            // Check if the API response *includes* the purchaseOrders array
+            if (updatedCustomerFromServer.purchaseOrders && updatedCustomerFromServer.purchaseOrders.length > 0) {
+               console.log(`[Store Action] Merging ${updatedCustomerFromServer.purchaseOrders.length} POs from updated customer ${id}`);
+               // Use the merge helper to replace old POs for this customer with the new ones
+               updatedPOs = mergePOs(state.purchaseOrders, updatedCustomerFromServer.purchaseOrders, id);
+            } else {
+               // Optional: If the update response *doesn't* include POs, decide if you should keep the old ones
+               // or assume they should be removed for this customer. Keeping them is safer unless
+               // the API guarantees absence means deletion.
+               console.log(`[Store Action] Updated customer ${id} response did not contain POs. Keeping existing POs in store for this customer.`);
+               // updatedPOs = state.purchaseOrders.filter(po => String(po.customerId) !== String(id)); // Uncomment to remove
+            }
+            // --- End PO Merge ---
+
+            return {
+              customers: state.customers.map((c) =>
+                c.id === id ? { ...c, ...updatedCustomerFromServer } : c // Update customer in customers array
+              ),
+              purchaseOrders: updatedPOs, // Update purchaseOrders state
+            };
+          });
 
           return updatedCustomerFromServer;
 
         } catch (error) {
+          // ... existing error handling ...
           console.error("[Store Action] Error in updateCustomer action:", error);
           throw error;
         }
       },
 
       setCurrentCustomer: (id: string | null) => {
+        // ... existing action ...
         set({ currentCustomerId: id })
       },
 
@@ -500,43 +544,34 @@ export const useStore = create<StoreState>()(
       // --- Action to fetch POs for a specific customer ---
       fetchPurchaseOrdersForCustomer: async (customerId: string): Promise<void> => {
         console.log(`[Store Action] fetchPurchaseOrdersForCustomer called for customer ${customerId}`);
-        // Optional: Set loading state if you add one to the store
-        // set({ isLoadingPurchaseOrders: true });
         try {
-          const response = await fetch(`/api/customers/${encodeURIComponent(customerId)}/purchase-orders`);
+          const response = await fetch(`/api/customers/${encodeURIComponent(customerId)}/purchase-orders`); // Assuming this endpoint exists
           if (!response.ok) {
             const errorBody = await response.text();
             console.error(`[Store Action] API Error fetching POs for customer ${customerId}:`, response.status, errorBody);
             throw new Error(`Failed to fetch purchase orders: ${response.statusText} - ${errorBody}`);
           }
           const fetchedPOs: PurchaseOrder[] = await response.json();
-          console.log(`[Store Action] Received ${fetchedPOs.length} POs for customer ${customerId} from API`);
+          console.log(`[Store Action] Received ${fetchedPOs.length} POs for customer ${customerId} from API via dedicated fetch.`);
 
-          // Merge fetched POs into the main state, replacing old ones for this customer
-          set((state) => {
-            // Filter out existing POs belonging to the current customer
-            const otherPOs = state.purchaseOrders.filter(po => String(po.customerId) !== String(customerId));
-            // Combine the other POs with the newly fetched ones
-            return { purchaseOrders: [...otherPOs, ...fetchedPOs] };
-          }, false);
+          // Merge fetched POs into the main state using the helper
+          set((state) => ({
+             purchaseOrders: mergePOs(state.purchaseOrders, fetchedPOs, customerId)
+          }), false);
 
         } catch (error) {
           console.error(`[Store Action] Error in fetchPurchaseOrdersForCustomer action for ${customerId}:`, error);
-          // Optional: Set error state in store
-          // set({ purchaseOrdersError: error.message });
-          throw error; // Re-throw so the component can catch it
-        } finally {
-          // Optional: Clear loading state
-          // set({ isLoadingPurchaseOrders: false });
+          throw error;
         }
       },
       // --- End fetchPurchaseOrdersForCustomer ---
 
+
     }),
     {
-      name: 'license-manager-storage', // unique name for localStorage
+      // ... existing persist config ...
+      name: 'license-manager-storage',
       storage: createJSONStorage(() => localStorage),
-      // Define which parts of the state should be persisted
       partialize: (state) => ({
         currentCustomerId: state.currentCustomerId,
       }),
@@ -545,4 +580,4 @@ export const useStore = create<StoreState>()(
 )
 
 // --- Export types if not already done in types.ts ---
-export type { StoreState, Customer, PurchaseOrder, Server, User, License }; // Removed Add...Input types
+export type { StoreState, Customer, PurchaseOrder, Server, User, License };

@@ -10,6 +10,7 @@ export interface Customer {
   businessAddressState?: string | null; // Changed from 'state', made optional
   businessAddressZip?: string | null; // Changed from 'zipCode', made optional
   businessAddressCountry?: string | null; // Changed from 'country', made optional
+  purchaseOrders?: PurchaseOrder[]; // Optional, to include related purchase orders
 }
 
 export interface User {
@@ -44,7 +45,8 @@ export interface PurchaseOrder {
   customerId: string
   poNumber: string
   purchaseDate: Date
-  licenses: License[]
+  licenses?: License[]
+  isClosed: boolean
 }
 
 export interface StoreState {
