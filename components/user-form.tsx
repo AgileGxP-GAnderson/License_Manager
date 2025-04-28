@@ -2,19 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form"; // Make sure SubmitHandler is imported if needed elsewhere, though often inferred
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox"; // <-- Import Checkbox
-import { useStore } from "@/lib/store";
+//import { useStore } from "@/lib/store";
+import { useUserStore } from "@/lib/stores/userStore"; // Adjust the import path as necessary
+import {} from "@/lib/stores/customerStore"; // Adjust the import path as necessary
 import { toast } from "@/components/ui/use-toast";
-import type { User, AddUserInput } from "@/lib/types"; // Assuming types exist
+import type { User, CreateUserInput } from "@/lib/types"; // Assuming types exist
 import { Loader2 } from "lucide-react";
 
 // --- Define or update the Zod schema ---
-const userFormSchema = z.object({
+const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   login: z.string().min(1, "Username/Login is required"),
@@ -26,7 +28,7 @@ const userFormSchema = z.object({
 });
 
 // Adjust FormValues type if needed, especially if editing schema differs
-type FormValues = z.infer<typeof userFormSchema>;
+type FormValues = z.infer<typeof formSchema>;
 
 interface UserFormProps {
   initialData?: User | null;
@@ -36,7 +38,7 @@ interface UserFormProps {
 }
 
 export default function UserForm({ initialData, customerId, onCancel, onSuccess }: UserFormProps) {
-  const { addUser, updateUser } = useStore();
+  const { createUser, updateUser } = useUserStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!initialData;
 
@@ -52,7 +54,7 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
   // --- End explicit definition ---
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(userFormSchema),
+    resolver: zodResolver(formSchema),
     // --- Use the explicitly typed default values object ---
     defaultValues: defaultFormValues,
     // --- End change ---
@@ -82,8 +84,9 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
   }, [initialData, form]);
 
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setIsSubmitting(true);
+    console.log('Hit Submit!');
     let resultUser: User | null = null;
 
     if (!customerId && !isEditing) {
@@ -94,12 +97,13 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
 
     // --- Prepare data for store action ---
     // The store action now handles getting customerId for adding
-    const userData: AddUserInput & { password?: string } = {
+    const userData: CreateUserInput & { password?: string } = {
         firstName: data.firstName,
         lastName: data.lastName,
         login: data.login,
         email: data.email,
         isActive: data.isActive, // Include isActive from form
+        customerId: customerId, // Use customerId from props
         // Conditionally add password only when creating
         ...( !isEditing && data.password && { password: data.password } ),
         // customerId is now handled within the store's addUser action
@@ -119,7 +123,7 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
             setIsSubmitting(false);
             return;
         }
-        resultUser = await addUser(userData); // Pass prepared data
+        resultUser = await createUser(userData); // Pass prepared data
         toast({ title: "Success", description: "User added successfully." });
       }
       onSuccess(resultUser);

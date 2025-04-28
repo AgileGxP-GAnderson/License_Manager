@@ -6,6 +6,14 @@ import { v4 as uuidv4 } from "uuid"
 import { addYears } from "date-fns"
 // --- Ensure all relevant types are imported ---
 import type { StoreState, Customer, PurchaseOrder, Server, User, License } from "./types"
+import * as inputTypes from "./api/input-types"
+import * as adminFetch from "./api/admin-api-fetch"
+import * as purchaseOrderFetch from "./api/purchaseOrder-api-fetch"
+import * as userFetch from "./api/user-api-fetch"
+import * as serverFetch from "./api/server-api-fetch"
+import * as licenseLedgerFetch from "./api/licenseLedger-api-fetch"
+
+
 
 // Helper function to merge POs (can be defined inside the persist callback)
 const mergePOs = (existingPOs: PurchaseOrder[], newPOs: PurchaseOrder[], customerId: string): PurchaseOrder[] => {
