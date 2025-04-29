@@ -6,76 +6,79 @@ import debounce from 'lodash.debounce';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useStore } from "@/lib/store";
-// No shallow needed for useMemo approach
+// import { useStore } from "@/lib/store"; // --- REMOVE ---
+import { useCustomerStore } from "@/lib/stores/customerStore"; // +++ ADD +++
+import { useUserStore } from "@/lib/stores/userStore"; // +++ ADD +++
 import CustomerForm from "@/components/customer-form";
 import CustomerDetails from "@/components/customer-details";
 import UserList from "@/components/user-list";
 import type { Customer, User } from "@/lib/types";
 import { toast } from "@/components/ui/use-toast";
+import { shallow } from 'zustand/shallow'; // +++ ADD IMPORT +++
 
 export default function AdminManageCustomerPage() {
-  // --- Select state and actions ---
-  const customers = useStore((state) => state.customers);
-  const currentCustomerId = useStore((state) => state.currentCustomerId);
-  const setCurrentCustomer = useStore((state) => state.setCurrentCustomer);
-  // --- Select the specific fetch action ---
-  const fetchUsersAction = useStore((state) => state.fetchUsersForCustomer);
-  // --- Select the selector function and raw user data for useMemo ---
-  const getUsersByCustomerIdSelector = useStore((state) => state.getUsersByCustomerId);
-  const allUsers = useStore((state) => state.users); // Needed for useMemo dependency
+  // --- Select state and actions from Customer Store ---
+  const selectedCustomer = useCustomerStore(state => state.selectedCustomer);
+  const customerLoading = useCustomerStore(state => state.loading);
+  const customerError = useCustomerStore(state => state.error);
+  const fetchCustomerById = useCustomerStore(state => state.fetchCustomerById);
+  const clearSelectedCustomer = useCustomerStore(state => state.clearSelectedCustomer);
 
-  const [selectedCustomerObject, setSelectedCustomerObject] = useState<Customer | null>(null);
+  // --- Select state and actions from User Store ---
+  const allUsers = useUserStore(state => state.users);
+  const userLoading = useUserStore(state => state.loading);
+  const userError = useUserStore(state => state.error);
+  const fetchUsersByCustomerId = useUserStore(state => state.fetchUsersByCustomerId);
+
+  // --- Local UI State ---
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Customer[]>([]);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoadingSearch, setIsLoadingSearch] = useState(false);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false); // Keep local search loading separate
+  // const [isLoadingUsers, setIsLoadingUsers] = useState(false); // --- REMOVE ---
 
-  // --- Compute the filtered list using useMemo ---
+  // --- Derived State: Compute the filtered list using useMemo ---
   const usersForSelectedCustomer = useMemo(() => {
-    // Use the selector function with the current ID
-    if (currentCustomerId && getUsersByCustomerIdSelector) {
-      return getUsersByCustomerIdSelector(currentCustomerId);
-    }
-    return []; // Return empty array if no customer ID or selector
-  }, [currentCustomerId, allUsers, getUsersByCustomerIdSelector]); // Depend on ID, raw users array, and selector fn
+    const customerId = selectedCustomer?.id; // Get ID from store's selected customer
+    if (!customerId) return [];
+    // Filter users from the user store based on the selected customer ID
+    return allUsers.filter(user => user.customerId === customerId);
+  }, [selectedCustomer?.id, allUsers]); // Depend on selected customer ID and the raw users array
 
-  // Effect to fetch users based on currentCustomerId from store
+  // --- Effects ---
+
+  // Effect to fetch users based on selectedCustomer from customerStore
   useEffect(() => {
+    const customerId = selectedCustomer?.id;
     // Only proceed if we have a valid customer ID and the fetch action
-    if (currentCustomerId && fetchUsersAction) {
-      console.log(`Effect triggered: Fetching users for customer ${currentCustomerId}`);
-      setIsLoadingUsers(true);
-      fetchUsersAction(currentCustomerId) // Call the action with the ID
+    if (customerId && fetchUsersByCustomerId) {
+      console.log(`Effect triggered: Fetching users for customer ${customerId}`);
+      // No need to set local loading state, userStore handles it
+      fetchUsersByCustomerId(customerId)
         .catch(error => {
-           console.error(`Failed to fetch users for customer ${currentCustomerId}:`, error);
+           // Error state is now available via userError from the store
+           console.error(`Failed to fetch users for customer ${customerId}:`, error);
+           // Keep toast for immediate feedback if desired
            toast({ variant: "destructive", title: "Error Loading Users", description: error.message || "Could not load users." });
         })
         .finally(() => {
-           console.log(`Effect finished: Fetching users for customer ${currentCustomerId}`);
-           setIsLoadingUsers(false);
+           console.log(`Effect finished: Fetching users for customer ${customerId}`);
+           // No need to set local loading state
         });
-    } else if (!currentCustomerId) {
-        // Optional: If the ID is cleared, ensure the local object is also cleared
-        // This might already be handled elsewhere (e.g., in handleAddClick), but can be a safeguard
-        if (selectedCustomerObject !== null) {
-            setSelectedCustomerObject(null);
-        }
     }
-    // Dependencies: Run only when customer ID changes, or if the action function reference changes
-  }, [currentCustomerId, fetchUsersAction]); // Removed 'customers' and simplified logic
+    // Dependencies: Run only when selected customer ID changes, or if the action function reference changes
+  }, [selectedCustomer?.id, fetchUsersByCustomerId]);
 
-  // Reset isEditing when showAddCustomer becomes false
+  // Reset isEditing when showAddCustomer becomes false (remains the same)
   useEffect(() => {
     if (!showAddCustomer) {
       setIsEditing(false);
     }
   }, [showAddCustomer]);
 
-  // Async function to fetch customers from API
+  // Async function to fetch customers from API (remains the same)
   const fetchCustomers = useCallback(async (query: string) => {
     if (!query.trim() || query.trim().length < 2) {
       setSearchResults([]); setIsLoadingSearch(false); return;
@@ -93,10 +96,10 @@ export default function AdminManageCustomerPage() {
     } finally { setIsLoadingSearch(false); }
   }, []);
 
-  // Debounced search function
+  // Debounced search function (remains the same)
   const debouncedSearch = useCallback(debounce(fetchCustomers, 300), [fetchCustomers]);
 
-  // useEffect to trigger debounced search on query change
+  // useEffect to trigger debounced search on query change (remains the same)
   useEffect(() => {
     if (searchQuery.trim().length >= 2) {
       debouncedSearch(searchQuery);
@@ -106,52 +109,73 @@ export default function AdminManageCustomerPage() {
     return () => { debouncedSearch.cancel(); };
   }, [searchQuery, debouncedSearch]);
 
-  // --- handleSelectCustomer should primarily just update the store ID ---
+  // --- Handle selecting a customer from search results ---
   const handleSelectCustomer = (customer: Customer) => {
-    // --- Set local state immediately for UI update ---
-    setSelectedCustomerObject(customer);
-    // --- Update store ID (this will trigger the useEffect to fetch users) ---
-    setCurrentCustomer(customer.id);
+    // --- Call store action to fetch and set the selected customer ---
+    fetchCustomerById(customer.id); // This updates selectedCustomer in the store
 
     // Clear search UI, hide forms etc.
     setSearchResults([]); setSearchQuery(""); setSearchError(null);
     setShowAddCustomer(false); setIsEditing(false);
-    // User fetching is now handled by the useEffect
+    // User fetching is now handled by the useEffect dependent on selectedCustomer.id
   }
 
+  // --- Handle clicking the Edit button ---
   const handleEditClick = () => {
-    if (selectedCustomerObject) {
+    // Use selectedCustomer from the store
+    if (selectedCustomer) {
       setIsEditing(true); setShowAddCustomer(true); setSearchResults([]); setSearchQuery("");
     }
   }
 
+  // --- Handle clicking the Add button ---
   const handleAddClick = () => {
     setIsEditing(false); setShowAddCustomer(true); setSearchResults([]); setSearchQuery("");
-    setCurrentCustomer(null); setSelectedCustomerObject(null);
+    // --- Clear the selected customer in the store ---
+    clearSelectedCustomer();
   }
 
+  // --- Handle canceling the form ---
   const handleCancelForm = () => {
     setShowAddCustomer(false); setIsEditing(false);
+    // If editing, potentially refetch the original customer to discard changes?
+    // Or rely on the fact that the store wasn't updated yet.
+    // If adding, the selectedCustomer should already be null via handleAddClick.
   }
 
-  const handleSuccessForm = (updatedCustomer: Customer | null) => {
-    if (updatedCustomer) {
-        setSelectedCustomerObject(updatedCustomer); setCurrentCustomer(updatedCustomer.id);
-    }
+  // --- Handle successful form submission (Add or Edit) ---
+  const handleSuccessForm = (updatedOrNewCustomerId: string | null) => {
     setShowAddCustomer(false); setIsEditing(false);
+    if (updatedOrNewCustomerId) {
+        // --- Refetch the customer data to ensure the store is up-to-date ---
+        fetchCustomerById(updatedOrNewCustomerId);
+    } else {
+        // If the form was adding and failed or returned null, clear selection
+        clearSelectedCustomer();
+    }
   }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       <h1 className="text-3xl font-bold text-brand-purple">Manage Customer / User</h1>
 
-      {/* Display Current Customer Name */}
-      {selectedCustomerObject && (
+      {/* Display Current Customer Name - Use store state */}
+      {customerLoading && (
+        <div className="mt-2 mb-4 p-2 border rounded bg-gray-100">
+          <p className="text-muted-foreground">Loading customer...</p>
+        </div>
+      )}
+      {selectedCustomer && !customerLoading && (
         <div className="mt-2 mb-4">
           <h2 className="text-xl font-semibold text-gray-700">
-            Current Customer: <span className="text-brand-purple">{selectedCustomerObject.businessName}</span>
+            Current Customer: <span className="text-brand-purple">{selectedCustomer.businessName}</span>
           </h2>
         </div>
+      )}
+      {customerError && !customerLoading && (
+         <div className="mt-2 mb-4 p-2 border rounded bg-red-100">
+           <p className="text-red-700">Error loading customer: {customerError}</p>
+         </div>
       )}
 
       {/* Customer Management Card */}
@@ -162,7 +186,7 @@ export default function AdminManageCustomerPage() {
         <CardContent className="pt-6">
           {/* Search and Action Buttons */}
           <div className="flex items-center justify-between mb-6 gap-2">
-            {/* Search Input */}
+            {/* Search Input (remains the same) */}
             <div className="flex items-center space-x-2 flex-1">
               <div className="flex-1 max-w-sm relative">
                 <Input
@@ -174,9 +198,9 @@ export default function AdminManageCustomerPage() {
                 {isLoadingSearch && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
               </div>
             </div>
-            {/* Action Buttons */}
+            {/* Action Buttons - Use store state for disabled check */}
             <div className="flex items-center space-x-2">
-              <Button variant="outline" onClick={handleEditClick} disabled={!selectedCustomerObject || showAddCustomer} className="border-brand-purple/20 text-brand-purple hover:bg-brand-purple/10 hover:text-brand-purple micro-interaction">
+              <Button variant="outline" onClick={handleEditClick} disabled={!selectedCustomer || showAddCustomer || customerLoading} className="border-brand-purple/20 text-brand-purple hover:bg-brand-purple/10 hover:text-brand-purple micro-interaction">
                 <Edit className="mr-2 h-4 w-4" /> Edit Customer
               </Button>
               <Button onClick={handleAddClick} disabled={showAddCustomer} className="bg-brand-purple hover:bg-brand-purple/90 micro-interaction">
@@ -185,7 +209,7 @@ export default function AdminManageCustomerPage() {
             </div>
           </div>
 
-          {/* Search Results or Error */}
+          {/* Search Results or Error (remains the same) */}
           {searchError && <p className="text-red-500 mb-4 text-sm">{searchError}</p>}
           {searchResults.length > 0 && (
             <div className="mb-6 border rounded-md p-4 border-brand-purple/20 bg-brand-purple/5">
@@ -206,39 +230,48 @@ export default function AdminManageCustomerPage() {
              <p className="text-muted-foreground mb-4 text-sm">No customers found matching "{searchQuery}".</p>
           )}
 
-          {/* Customer Form or Details */}
+          {/* Customer Form or Details - Use store state */}
           {showAddCustomer ? (
             <CustomerForm
-              initialData={isEditing ? selectedCustomerObject : null}
+              // Pass selectedCustomer from store as initialData when editing
+              initialData={isEditing ? selectedCustomer : null}
               onCancel={handleCancelForm}
-              onSuccess={handleSuccessForm}
+              // Pass the ID back on success
+              onSuccess={(customer) => handleSuccessForm(customer?.id ?? null)}
             />
           ) : (
-            selectedCustomerObject && <CustomerDetails customer={selectedCustomerObject} />
+            // Use selectedCustomer from store for details
+            selectedCustomer && !customerLoading && <CustomerDetails customer={selectedCustomer} />
           )}
+          {/* Show loading/error specific to customer details section if needed */}
+          {customerLoading && !showAddCustomer && <p>Loading details...</p>}
+          {customerError && !showAddCustomer && <p className="text-red-500">Error: {customerError}</p>}
+
         </CardContent>
       </Card>
 
       {/* --- User Management Section --- */}
-      {/* Show UserList only when a customer is selected (via selectedCustomerObject or currentCustomerId) */}
-      {currentCustomerId && !showAddCustomer && (
+      {/* Show UserList only when a customer is selected (via selectedCustomer from store) */}
+      {selectedCustomer && !showAddCustomer && !customerLoading && !customerError && (
         <Card className="enhanced-card">
           <CardHeader>
-             {/* Display customer name if available */}
-             <CardTitle>Manage Users for: {selectedCustomerObject?.businessName || `Customer ID ${currentCustomerId}`}</CardTitle>
+             <CardTitle>Manage Users for: {selectedCustomer.businessName}</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
-            {/* Use isLoadingUsers state */}
-            {isLoadingUsers ? (
+            {/* Use userLoading state from userStore */}
+            {userLoading ? (
               <div className="flex items-center justify-center p-4">
                 <Loader2 className="h-6 w-6 animate-spin text-brand-purple" />
                 <span className="ml-2">Loading users...</span>
               </div>
+            // Display error from userStore if fetching users failed
+            ) : userError ? (
+              <p className="text-red-500">Error loading users: {userError}</p>
             ) : (
               // --- Pass the memoized usersForSelectedCustomer ---
               <UserList
                  users={usersForSelectedCustomer} // Pass the list derived via useMemo
-                 customerId={currentCustomerId} // Pass the ID for add/edit forms
+                 customerId={selectedCustomer.id} // Pass the ID for add/edit forms
               />
             )}
           </CardContent>
