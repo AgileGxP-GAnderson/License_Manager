@@ -49,39 +49,42 @@ export interface PurchaseOrder {
   isClosed: boolean
 }
 
-// --- Customer Store State Interface ---
-export interface CustomerState {
-  customers: Customer[];
-  selectedCustomer: Customer | null;
-  loading: boolean;
-  error: string | null;
-  fetchCustomers: () => Promise<void>;
-  fetchCustomerById: (id: string) => Promise<void>;
-  createCustomer: (customer: Omit<Customer, 'id' | 'purchaseOrders'>) => Promise<void>; // Adjust Omit as needed
-  updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
-  deleteCustomer: (id: string) => Promise<void>;
-  setSelectedCustomer: (customer: Customer | null) => void;
-}
+// // --- Customer Store State Interface ---
+// export interface CustomerState {
+//   customers: Customer[];
+//   selectedCustomer: Customer | null;
+//   loading: boolean;
+//   error: string | null;
+//   fetchCustomers: () => Promise<void>;
+//   fetchCustomerById: (id: string) => Promise<void>;
+//   createCustomer: (customer: Omit<Customer, 'id' | 'purchaseOrders'>) => Promise<void>; // Adjust Omit as needed
+//   updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
+//   deleteCustomer: (id: string) => Promise<void>;
+//   setSelectedCustomer: (customer: Customer | null) => void;
+// }
 
 // --- User Store State Interface ---
 // Adjust input types (Omit/Partial) based on the actual User model and API needs
 export type CreateUserInput = Omit<User, 'id'>;
 export type UpdateUserInput = Partial<User>;
 
-export interface UserState {
-  users: User[];
-  selectedUser: User | null;
-  loading: boolean;
-  error: string | null;
-  fetchUsers: () => Promise<void>;
-  fetchUserById: (id: string) => Promise<void>;
-  createUser: (user: CreateUserInput) => Promise<void>;
-  updateUser: (id: string, user: UpdateUserInput) => Promise<void>;
-  deleteUser: (id: string) => Promise<void>;
-  // Assuming an action to fetch users specifically for a customer exists or is needed
-  fetchUsersByCustomerId?: (customerId: string) => Promise<void>;
-  setSelectedUser?: (user: User | null) => void; // Optional: if needed for direct setting
-}
+export type PurchaseOrderInput = Omit<PurchaseOrder, 'id'>;
+export type UpdatePurchaseOrderInput = Partial<PurchaseOrder>;
+
+// export interface UserState {
+//   users: User[];
+//   selectedUser: User | null;
+//   loading: boolean;
+//   error: string | null;
+//   fetchUsers: () => Promise<void>;
+//   fetchUserById: (id: string) => Promise<void>;
+//   createUser: (user: CreateUserInput) => Promise<void>;
+//   updateUser: (id: string, user: UpdateUserInput) => Promise<void>;
+//   deleteUser: (id: string) => Promise<void>;
+//   // Assuming an action to fetch users specifically for a customer exists or is needed
+//   fetchUsersByCustomerId?: (customerId: string) => Promise<void>;
+//   setSelectedUser?: (user: User | null) => void; // Optional: if needed for direct setting
+// }
 
 
 // --- Existing Combined StoreState (Kept as requested) ---

@@ -8,15 +8,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useStore } from "@/lib/store"
+import { PurchaseOrder } from '@/lib/types'; // Adjust import path
 
 interface PurchaseOrderListProps {
-  customerId: string
-  isAdminView?: boolean
+  purchaseOrders: PurchaseOrder[]; // Receive data as prop
+  isLoading: boolean;             // Receive loading state as prop
+  error: string | null;           // Receive error state as prop
+  isAdminView?: boolean;
 }
 
-export default function PurchaseOrderList({ customerId, isAdminView = false }: PurchaseOrderListProps) {
-  const { getPurchaseOrdersByCustomerId, getServerById, activateLicense } = useStore()
-  const purchaseOrders = getPurchaseOrdersByCustomerId(customerId)
+const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
+  purchaseOrders,
+  isLoading,
+  error,
+  isAdminView = false,
+}) => {
+  const { getServerById, activateLicense } = useStore()
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
 
   const toggleItem = (id: string) => {
@@ -44,8 +51,16 @@ export default function PurchaseOrderList({ customerId, isAdminView = false }: P
     }
   }
 
+  if (isLoading) {
+    return <p className="text-gray-500">Loading purchase orders...</p>;
+  }
+
+  if (error) {
+    return <p className="text-red-600">Error loading purchase orders: {error}</p>;
+  }
+
   if (purchaseOrders.length === 0) {
-    return <div className="text-center py-8 text-muted-foreground">No purchase orders found for this customer.</div>
+    return <p className="text-gray-500">No purchase orders found for this customer.</p>;
   }
 
   return (
@@ -64,7 +79,7 @@ export default function PurchaseOrderList({ customerId, isAdminView = false }: P
               </div>
             </div>
             <Badge>
-              {po.licenses.length} License{po.licenses.length !== 1 ? "s" : ""}
+              {po.licenses?.length} License{po.licenses?.length !== 1 ? "s" : ""}
             </Badge>
           </div>
 
@@ -84,7 +99,7 @@ export default function PurchaseOrderList({ customerId, isAdminView = false }: P
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {po.licenses.map((license, index) => (
+                  {po.licenses?.map((license, index) => (
                     <TableRow key={index}>
                       <TableCell>{license.licenseType}</TableCell>
                       <TableCell>
@@ -132,3 +147,5 @@ export default function PurchaseOrderList({ customerId, isAdminView = false }: P
     </div>
   )
 }
+
+export default PurchaseOrderList;

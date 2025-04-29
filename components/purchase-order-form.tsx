@@ -1,359 +1,144 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { z } from "zod"
-import { useForm, useFieldArray } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { format } from "date-fns"
-import { CalendarIcon, Plus, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
-import { useStore } from "@/lib/store"
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { PurchaseOrderInput } from '@/lib/types'; // Adjust import path
+import { usePurchaseOrderStore } from '@/lib/stores/purchaseOrderStore'; // Import the store hook
 
+// --- Zod Schema for Validation ---
 const formSchema = z.object({
-  poNumber: z.string().min(1, { message: "PO Number is required" }),
-  purchaseDate: z.date(),
-  licenses: z
-    .array(
-      z.object({
-        licenseType: z.string(),
-        status: z.string(),
-        duration: z.string(),
-        activationDate: z.date().optional(),
-        expirationDate: z.date().optional().nullable(),
-      }),
-    )
-    .min(1, { message: "At least one license is required" }),
-})
+  poName: z.string().min(1, { message: "Purchase order name is required." }),
+  purchaseDate: z.string().refine((date) => !isNaN(Date.parse(date)), { // Basic date validation
+    message: "Invalid date format.",
+  }),
+  // Add other fields as needed based on PurchaseOrderInput
+  // isClosed: z.boolean().optional(),
+});
 
-type FormValues = z.infer<typeof formSchema>
-
+// --- Component Props ---
 interface PurchaseOrderFormProps {
-  customerId: string
-  onCancel: () => void
-  onSuccess: () => void
+  customerId: string; // Required to associate the PO
+  initialData?: Partial<PurchaseOrderInput>; // For editing (optional)
+  onCancel: () => void;
+  onSuccess: () => void; // Callback after successful store action
 }
 
-export default function PurchaseOrderForm({ customerId, onCancel, onSuccess }: PurchaseOrderFormProps) {
-  const { addPurchaseOrder, isPONumberUnique } = useStore()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [poNumberError, setPoNumberError] = useState<string | null>(null)
+const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
+  customerId,
+  initialData,
+  onCancel,
+  onSuccess,
+}) => {
+  const isEditing = !!initialData;
+  const [isLoading, setIsLoading] = useState(false); // Local loading state for form submission
+  const [formError, setFormError] = useState<string | null>(null); // Local error state for form submission
 
-  const form = useForm<FormValues>({
+  // --- Get Store Actions ---
+  const { addPurchaseOrder, updatePurchaseOrder } = usePurchaseOrderStore();
+
+  // --- React Hook Form Setup ---
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      poNumber: "",
-      purchaseDate: new Date(),
-      licenses: [
-        {
-          licenseType: "1", // Agile Engine
-          status: "Available",
-          duration: "1 Year",
-          activationDate: undefined,
-          expirationDate: null,
-        },
-      ],
+      poName: initialData?.poNumber || '',
+      purchaseDate: initialData?.purchaseDate ? new Date(initialData.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], // Format for date input
+      // ... other default values
     },
-  })
+  });
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "licenses",
-  })
+  // --- Submit Handler ---
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+    setFormError(null);
 
-  const onSubmit = async (data: FormValues) => {
-    console.log("Hit onSubmit with data:", data);
-    setIsSubmitting(true)
-    setPoNumberError(null); // Clear previous error
-
-    // Validate PO Number uniqueness
-    if (!isPONumberUnique(data.poNumber)) {
-      setPoNumberError("This PO Number already exists. Please use a unique PO Number.")
-      setIsSubmitting(false)
-      return
-    }
+    const poData: PurchaseOrderInput = {
+      ...values,
+      customerId: customerId, // Ensure customerId is included
+      purchaseDate: new Date(values.purchaseDate).toISOString(), // Convert back to ISO string
+      // isClosed: values.isClosed ?? false, // Handle optional fields
+    };
 
     try {
-      // Call the store action which should handle the API call
-      addPurchaseOrder(customerId, {
-        poNumber: data.poNumber,
-        purchaseDate: data.purchaseDate,
-        licenses: data.licenses.map((license) => ({
-          ...license,
-          licenseType: license.licenseType === "1" ? "Agile Engine" : license.licenseType,
-          // If duration is Perpetual, ensure expirationDate is null
-          expirationDate: license.duration === "Perpetual" ? null : license.expirationDate,
-        })),
-      })
-      onSuccess() // Call the success callback passed via props
-    } catch (error) {
-      console.error("Failed to add purchase order:", error)
-      // Optionally: Set a general form error state here to display to the user
+      let result = null;
+      if (isEditing && initialData?.id) {
+        // --- Call Update Action from Store ---
+        // result = await updatePurchaseOrder(initialData.id, poData);
+        console.warn("Update functionality not fully implemented in this example."); // Placeholder
+      } else {
+        // --- Call Add Action from Store ---
+        result = await addPurchaseOrder(poData);
+      }
+
+      if (result) {
+        console.log("Store action successful:", result);
+        onSuccess(); // Call the success callback passed from the parent
+      } else {
+        // The store action itself should set the global error state if it fails
+        // We might set a local form error if the store action returns null without throwing
+        setFormError("Failed to save purchase order. Check console or store state for details.");
+        console.error("Store action returned null or failed.");
+      }
+    } catch (error: any) {
+      // This catch block might not be reached if the store handles errors internally
+      console.error("Error submitting purchase order form:", error);
+      setFormError(error.message || "An unexpected error occurred.");
     } finally {
-      setIsSubmitting(false)
+      setIsLoading(false);
     }
-  }
-
-  const addLicense = () => {
-    append({
-      licenseType: "1", // Agile Engine
-      status: "Available",
-      duration: "1 Year",
-      activationDate: undefined,
-      expirationDate: null,
-    })
-  }
-
-  // Clear PO number error when the field changes
-  useEffect(() => {
-    if (poNumberError) {
-      const subscription = form.watch((value, { name }) => {
-        if (name === "poNumber") {
-          setPoNumberError(null)
-        }
-      })
-      return () => subscription.unsubscribe()
-    }
-  }, [form, poNumberError])
+  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <h2 className="text-xl font-semibold">Add New Purchase Order</h2>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4 border rounded-md bg-gray-50">
+        {formError && <p className="text-sm text-red-600 bg-red-100 p-2 rounded">{formError}</p>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="poNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>PO Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="PO-12345" {...field} />
-                </FormControl>
-                {poNumberError && <p className="text-sm font-medium text-destructive">{poNumberError}</p>}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="purchaseDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Purchase Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                      >
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    {/* Changed selected to value */}
-                    <Calendar value={field.value} onChange={field.onChange} />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">Licenses</h3>
-            <Button type="button" onClick={addLicense} variant="outline" size="sm">
-              <Plus className="mr-2 h-4 w-4" /> Add License
-            </Button>
-          </div>
-
-          {fields.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              At least one license is required. Click "Add License" to add one.
-            </p>
+        <FormField
+          control={form.control}
+          name="poName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Purchase Order Name</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Q3 Software Order" {...field} disabled={isLoading} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
+        />
 
-          {fields.map((field, index) => (
-            <div key={field.id} className="border rounded-md p-4 space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="font-medium">License #{index + 1}</h4>
-                {fields.length > 1 && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => remove(index)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+        <FormField
+          control={form.control}
+          name="purchaseDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Purchase Date</FormLabel>
+              <FormControl>
+                {/* Use type="date" for better UX */}
+                <Input type="date" {...field} disabled={isLoading} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name={`licenses.${index}.licenseType`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>License Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select license type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {/* Assuming '1' corresponds to 'Agile Engine' */}
-                          <SelectItem value="1">Agile Engine</SelectItem>
-                          {/* Add other license types here if applicable */}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        {/* Add other form fields for PurchaseOrderInput here */}
 
-                <FormField
-                  control={form.control}
-                  name={`licenses.${index}.status`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      {/* Status is likely determined by logic, not user input on creation */}
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={true}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Available">Available</SelectItem>
-                          <SelectItem value="Activation Requested">Activation Requested</SelectItem>
-                          <SelectItem value="Activated">Activated</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name={`licenses.${index}.duration`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Duration</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select duration" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="1 Year">1 Year</SelectItem>
-                          <SelectItem value="2 Years">2 Years</SelectItem>
-                          <SelectItem value="3 Years">3 Years</SelectItem>
-                          <SelectItem value="4 Years">4 Years</SelectItem>
-                          <SelectItem value="5 Years">5 Years</SelectItem>
-                          <SelectItem value="Perpetual">Perpetual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name={`licenses.${index}.activationDate`}
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Activation Date</FormLabel>
-                      {/* Activation date is likely set later, not on creation */}
-                      <Popover>
-                        <PopoverTrigger asChild disabled>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground",
-                              )}
-                              disabled
-                            >
-                              {field.value ? format(field.value, "PPP") : <span>Not activated</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          {/* Calendar might not be needed here if disabled */}
-                          {/* Changed selected to value */}
-                          <Calendar value={field.value} onChange={field.onChange} />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Conditionally render Expiration Date based on Duration */}
-                {form.watch(`licenses.${index}.duration`) !== "Perpetual" && (
-                  <FormField
-                    control={form.control}
-                    name={`licenses.${index}.expirationDate`}
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Expiration Date</FormLabel>
-                        {/* Expiration date is likely calculated/set later, not on creation */}
-                        <Popover>
-                          <PopoverTrigger asChild disabled>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                                disabled
-                              >
-                                {field.value ? format(field.value, "PPP") : <span>Not set</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            {/* Calendar might not be needed here if disabled */}
-                            {/* Changed selected to value */}
-                            <Calendar value={field.value} onChange={field.onChange}  />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
+        <div className="flex justify-end space-x-3 pt-4">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting || fields.length === 0}>
-            {isSubmitting ? "Saving..." : "Save Purchase Order"} {/* Changed button text */}
+          <Button type="submit" disabled={isLoading} className="bg-brand-purple hover:bg-brand-purple/90">
+            {isLoading ? (isEditing ? 'Saving...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Purchase Order')}
           </Button>
         </div>
       </form>
     </Form>
-  )
-}
+  );
+};
+
+export default PurchaseOrderForm;
