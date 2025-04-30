@@ -92,9 +92,25 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                 <p className="text-sm text-muted-foreground">Purchase Date: {formatDate(po.purchaseDate)}</p>
               </div>
             </div>
-            <Badge>
-              {po.licenses?.length} License{po.licenses?.length !== 1 ? "s" : ""}
-            </Badge>
+            {/* Wrap Badge and Button in a flex container */}
+            <div className="flex items-center gap-2">
+              <Badge>
+                {po.licenses?.length} License{po.licenses?.length !== 1 ? "s" : ""}
+              </Badge>
+              {/* Add New License Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent accordion toggle
+                  // TODO: Implement handleAddNewLicense function
+                  console.log("Add New License clicked for PO:", po.id);
+                  // handleAddNewLicense(po.id);
+                }}
+              >
+                Add New License
+              </Button>
+            </div>
           </div>
 
           {openItems[po.id] && (
@@ -136,7 +152,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                       </TableCell>
                       <TableCell>
                         {/* +++ Check licenseType for Perpetual instead of duration +++ */}
-                        {Number(license.licenseType) === 100 ? "Perpetual" : formatDate(license.expirationDate)}
+                        {Number(license.typeId) === 100 ? "Perpetual" : formatDate(license.expirationDate)}
                       </TableCell>
                       <TableCell>
                         {/* +++ Optimized server name lookup +++ */}
