@@ -34,7 +34,7 @@ export interface Server {
 export interface License {
   status: string
   typeId: number
-  duration: string
+  totalDuration: string
   activationDate?: Date
   expirationDate?: Date | null
   serverId?: string

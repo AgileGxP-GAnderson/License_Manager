@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, Plus, Edit, Loader2 } from "lucide-react";
+import { Search, Plus, Edit, ArrowBigDown, ArrowBigDownDash } from "lucide-react";
 import debounce from 'lodash.debounce';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -195,7 +195,7 @@ export default function AdminManageCustomerPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-brand-purple/20 focus-visible:ring-brand-purple/30"
                 />
-                {isLoadingSearch && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+                {isLoadingSearch && <ArrowBigDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin duration-500 text-muted-foreground" />}
               </div>
             </div>
             {/* Action Buttons - Use store state for disabled check */}
@@ -261,7 +261,7 @@ export default function AdminManageCustomerPage() {
             {/* Use userLoading state from userStore */}
             {userLoading ? (
               <div className="flex items-center justify-center p-4">
-                <Loader2 className="h-6 w-6 animate-spin text-brand-purple" />
+                <ArrowBigDownDash className="h-6 w-6 animate-spin text-brand-purple" />
                 <span className="ml-2">Loading users...</span>
               </div>
             // Display error from userStore if fetching users failed

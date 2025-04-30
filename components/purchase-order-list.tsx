@@ -210,6 +210,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
   };
 
   const getDurationText = (durationValue: number | string | undefined | null): string => {
+    console.log('Hit getDurationText with value:', durationValue);
       const val = Number(durationValue);
       if (val === perpetualDurationValue) return "Perpetual";
       const annual = annualDurations.find(d => d.value === val);
@@ -294,7 +295,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                             {license.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{getDurationText(license.duration)}</TableCell>
+                        <TableCell>{getDurationText(license.totalDuration)}</TableCell>
                         <TableCell>
                           {license.activationDate ? formatDate(license.activationDate) : "Not activated"}
                         </TableCell>
