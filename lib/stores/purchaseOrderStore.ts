@@ -1,29 +1,32 @@
 import { create } from 'zustand';
-import { PurchaseOrder, PurchaseOrderInput, License } from '@/lib/types'; // Adjust path and types as needed
-import { addYears } from 'date-fns'; // Needed for activateLicense
+// +++ Ensure LicenseInput is imported and correct +++
+import { PurchaseOrder, PurchaseOrderInput, License, LicenseInput } from '@/lib/types';
+import { addYears } from 'date-fns';
 
-// --- Combined State and Actions Interface ---
+// --- Interface ---
 interface PurchaseOrderStoreState {
-  // State
+  // ... existing state ...
   purchaseOrders: PurchaseOrder[];
   isLoadingPurchaseOrders: boolean;
   purchaseOrderError: string | null;
 
-  // Actions for Purchase Orders
+  // ... existing actions ...
   fetchPurchaseOrdersByCustomerId: (customerId: string) => Promise<void>;
   addPurchaseOrder: (poData: PurchaseOrderInput) => Promise<PurchaseOrder | null>;
   updatePurchaseOrder: (poId: string, poData: Partial<PurchaseOrderInput>) => Promise<PurchaseOrder | null>;
   deletePurchaseOrder: (poId: string) => Promise<boolean>;
   setPurchaseOrders: (purchaseOrders: PurchaseOrder[]) => void;
   clearPurchaseOrders: () => void;
-  isPONameUnique: (poNumber: string) => boolean; // Added helper
-  getPurchaseOrdersByCustomerId: (customerId: string) => PurchaseOrder[]; // Added selector
+  isPONameUnique: (poNumber: string) => boolean;
+  getPurchaseOrdersByCustomerId: (customerId: string) => PurchaseOrder[];
 
-  // --- Actions for Licenses within Purchase Orders ---
-  updateLicense: (poId: string, licenseIndex: number, licenseData: Partial<License>) => Promise<void>; // Added API call
-  activateLicense: (poId: string, licenseIndex: number) => Promise<void>; // Added API call
-  requestLicenseActivation: (poId: string, licenseIndex: number, serverId: string) => Promise<void>; // Added API call
-  deactivateLicense: (poId: string, licenseIndex: number) => Promise<void>; // Added API call
+  // +++ Add new action signature +++
+  addLicenseToPurchaseOrder: (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration'>) => Promise<License | null>;
+  // ... existing license actions ...
+  updateLicense: (poId: string, licenseIndex: number, licenseData: Partial<License>) => Promise<void>;
+  activateLicense: (poId: string, licenseIndex: number) => Promise<void>;
+  requestLicenseActivation: (poId: string, licenseIndex: number, serverId: string) => Promise<void>;
+  deactivateLicense: (poId: string, licenseIndex: number) => Promise<void>;
 }
 
 // --- Initial State ---
@@ -237,6 +240,9 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
         updatedPOsOptimistic[poIndex] = { ...updatedPOsOptimistic[poIndex], licenses: updatedLicensesOptimistic };
         set({ purchaseOrders: updatedPOsOptimistic, isLoadingPurchaseOrders: true, purchaseOrderError: null });
 
+        const licenseToUpdate = originalPOs[poIndex].licenses![licenseIndex];
+        const licenseId = licenseToUpdate.id; // Get the actual license ID
+
         try {
             // Prepare payload for API (convert dates back to strings if needed)
             const apiPayload = {
@@ -246,8 +252,8 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
             };
 
             // API Call - Assuming endpoint like PATCH /api/purchaseOrders/{poId}/licenses/{licenseIndex}
-            const response = await fetch(`/api/purchaseOrders/${poId}/licenses/${licenseIndex}`, {
-                method: 'PATCH', // Or PUT
+            const response = await fetch(`/api/licenses/${licenseId}`, { // Use specific license endpoint
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(apiPayload),
             });
@@ -505,6 +511,76 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
             console.error("Error deactivating license:", errorMessage, error);
             // Rollback optimistic update
             set({ purchaseOrders: originalPOs, purchaseOrderError: errorMessage, isLoadingPurchaseOrders: false });
+        }
+    },
+
+    // +++ Add implementation for addLicenseToPurchaseOrder +++
+    addLicenseToPurchaseOrder: async (licenseData) => {
+        if (!licenseData.poId || !licenseData.typeId || licenseData.duration == null) {
+            const errorMsg = "Missing required data (poId, typeId, duration) to add license.";
+            console.error(errorMsg);
+            set({ purchaseOrderError: errorMsg, isLoadingPurchaseOrders: false });
+            return null;
+        }
+
+        set({ isLoadingPurchaseOrders: true, purchaseOrderError: null });
+        const originalPOs = get().purchaseOrders;
+
+        try {
+            // +++ Change API endpoint and request body +++
+            const response = await fetch(`/api/purchaseOrders/${licenseData.poId}/licenses`, { // Use new nested endpoint
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    // poId is now in the URL, only send typeId and duration
+                    typeId: licenseData.typeId,
+                    duration: licenseData.duration,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: `Failed to add license (${response.status})` }));
+                throw new Error(errorData.message || `Failed to add license (${response.status})`);
+            }
+
+            const newLicense: License = await response.json();
+
+            // Process dates and potentially add duration back if needed by UI type
+            const processedLicense = {
+                ...newLicense,
+                activationDate: newLicense.activationDate ? new Date(newLicense.activationDate) : undefined,
+                expirationDate: newLicense.expirationDate ? new Date(newLicense.expirationDate) : null,
+                // If your License type in the frontend *requires* duration, add it back here
+                // It might come from the response or you can use licenseData.duration
+                duration: newLicense.duration ?? licenseData.duration, // Example: Prefer response, fallback to input
+            };
+
+            set((state) => {
+                const poIndex = state.purchaseOrders.findIndex(p => String(p.id) === String(licenseData.poId));
+                if (poIndex === -1) {
+                    console.warn(`PO ${licenseData.poId} not found in state after adding license.`);
+                    return { ...state, isLoadingPurchaseOrders: false };
+                }
+                const updatedPOs = [...state.purchaseOrders];
+                const updatedPO = { ...updatedPOs[poIndex] };
+                updatedPO.licenses = [...(updatedPO.licenses || []), processedLicense];
+                updatedPOs[poIndex] = updatedPO;
+                return {
+                    purchaseOrders: updatedPOs,
+                    isLoadingPurchaseOrders: false,
+                    purchaseOrderError: null
+                };
+            });
+
+            return processedLicense;
+
+        } catch (error: any) {
+            console.error("Error adding license to purchase order:", error);
+            set({
+                purchaseOrderError: error.message || 'Failed to add license',
+                isLoadingPurchaseOrders: false,
+            });
+            return null;
         }
     },
 

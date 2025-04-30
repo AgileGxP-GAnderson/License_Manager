@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize';
-import sequelizeConnection from '../config/database'; // Import the connection instance
+import { sequelize } from '@/lib/db'; // Import the connection instance from db.ts
 
 // Import models
 import Administrator from './administrator';
@@ -62,7 +62,7 @@ License.belongsToMany(PurchaseOrder, {
 
 // Export the connection and all models
 const db = {
-  sequelize: sequelizeConnection,
+  sequelize: sequelizeConnection, // Use the correctly imported connection
   Sequelize, // Export Sequelize class itself if needed elsewhere
   Administrator,
   Customer,
