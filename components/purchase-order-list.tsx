@@ -7,8 +7,9 @@ import { ChevronDown, ChevronRight } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useStore } from "@/lib/store"
-import { PurchaseOrder } from '@/lib/types'; // Adjust import path
+import { useServerStore } from "@/lib/stores/serverStore" // Adjust import path
+import { usePurchaseOrderStore } from "@/lib/stores/purchaseOrderStore"
+import { PurchaseOrder, License } from '@/lib/types'; // Adjust import path // +++ Added License type
 
 interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrder[]; // Receive data as prop
@@ -23,7 +24,8 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
   error,
   isAdminView = false,
 }) => {
-  const { getServerById, activateLicense } = useStore()
+  const { getServerById } = useServerStore()
+  const { activateLicense } = usePurchaseOrderStore() // +++ Corrected import
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
 
   const toggleItem = (id: string) => {
@@ -51,6 +53,17 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
     }
   }
 
+  // +++ Helper function to translate licenseType ID to text +++
+  const getLicenseTypeText = (typeId: number | string | undefined): string => {
+    const id = Number(typeId); // Ensure it's a number
+    console.log("License Type ID:", id); // Debugging log
+    switch (id) {
+      case 1: return "Annual";
+      case 2: return "Perpetual";
+      default: return `Unknown Type (${typeId})`; // Fallback for unexpected values
+    }
+  };
+
   if (isLoading) {
     return <p className="text-gray-500">Loading purchase orders...</p>;
   }
@@ -71,10 +84,11 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
             className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50"
             onClick={() => toggleItem(po.id)}
           >
-            <div className="flex items-center gap-2">
+            {/* ... existing header code ... */}
+             <div className="flex items-center gap-2">
               {openItems[po.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               <div>
-                <h3 className="font-medium">PO #{po.poNumber}</h3>
+                <h3 className="font-medium">PO: {po.poName}<div id={po.poName}></div></h3>
                 <p className="text-sm text-muted-foreground">Purchase Date: {formatDate(po.purchaseDate)}</p>
               </div>
             </div>
@@ -101,7 +115,8 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                 <TableBody>
                   {po.licenses?.map((license, index) => (
                     <TableRow key={index}>
-                      <TableCell>{license.licenseType}</TableCell>
+                      {/* +++ Use the helper function here +++ */}
+                      <TableCell>{getLicenseTypeText(license.typeId)}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
@@ -120,12 +135,12 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                         {license.activationDate ? formatDate(license.activationDate) : "Not activated"}
                       </TableCell>
                       <TableCell>
-                        {license.duration === "Perpetual" ? "Perpetual" : formatDate(license.expirationDate)}
+                        {/* +++ Check licenseType for Perpetual instead of duration +++ */}
+                        {Number(license.licenseType) === 100 ? "Perpetual" : formatDate(license.expirationDate)}
                       </TableCell>
                       <TableCell>
-                        {license.serverId && getServerById(license.serverId)
-                          ? getServerById(license.serverId)?.name
-                          : "None"}
+                        {/* +++ Optimized server name lookup +++ */}
+                        {license.serverId ? (getServerById(license.serverId)?.name ?? "Server not found") : "None"}
                       </TableCell>
                       {isAdminView && (
                         <TableCell>
@@ -134,6 +149,12 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                               Activate
                             </Button>
                           )}
+                          {/* +++ Optional: Add Deactivate button +++ */}
+                          {/* {license.status === "Activated" && (
+                            <Button variant="outline" size="sm" onClick={(e) => handleDeactivate(e, po.id, index)}>
+                              Deactivate
+                            </Button>
+                          )} */}
                         </TableCell>
                       )}
                     </TableRow>

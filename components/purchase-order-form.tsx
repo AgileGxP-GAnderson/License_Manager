@@ -45,7 +45,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      poName: initialData?.poNumber || '',
+      poName: initialData?.poName || '',
       purchaseDate: initialData?.purchaseDate ? new Date(initialData.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], // Format for date input
       // ... other default values
     },

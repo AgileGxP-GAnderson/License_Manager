@@ -32,8 +32,8 @@ export interface Server {
 }
 
 export interface License {
-  licenseType: string
   status: string
+  typeId: number
   duration: string
   activationDate?: Date
   expirationDate?: Date | null
@@ -43,7 +43,7 @@ export interface License {
 export interface PurchaseOrder {
   id: string
   customerId: string
-  poNumber: string
+  poName: string
   purchaseDate: Date
   licenses?: License[]
   isClosed: boolean
@@ -104,7 +104,7 @@ export interface StoreState {
   setCurrentCustomer: (id: string | null) => void
   searchCustomers: (query: string) => Customer[]; // Assuming local search
 
-  addPurchaseOrder: (customerId: string, po: Pick<PurchaseOrder, 'poNumber' | 'purchaseDate' | 'licenses'>) => Promise<PurchaseOrder>;
+  addPurchaseOrder: (customerId: string, po: Pick<PurchaseOrder, 'poName' | 'purchaseDate' | 'licenses'>) => Promise<PurchaseOrder>;
   updatePurchaseOrder: (id: string, po: Partial<PurchaseOrder>) => Promise<PurchaseOrder>; // Assuming async
   getPurchaseOrdersByCustomerId: (customerId: string) => PurchaseOrder[]
   fetchPurchaseOrdersForCustomer: (customerId: string) => Promise<void>;
