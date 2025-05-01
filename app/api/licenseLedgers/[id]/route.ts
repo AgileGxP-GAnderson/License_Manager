@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
         const body: Partial<LicenseLedgerInput> = await request.json();
         // Prevent updating primary key or timestamps directly
-        const { id: bodyId, createdAt, updatedAt, licenseId: bodyLicenseId, serverID: bodyServerId, licenseActionId: bodyActionId, ...updateDataInput } = body;
+        const { id: bodyId, createdAt, updatedAt, licenseId: bodyLicenseId, serverId: bodyServerId, licenseActionId: bodyActionId, ...updateDataInput } = body;
         const updateData: Partial<LicenseLedgerInput> = { ...updateDataInput }; // Clone
 
         // Validate foreign keys if they are being updated
@@ -70,10 +70,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
              if (!licenseExists) return new NextResponse(`License with ID ${body.licenseId} not found.`, { status: 400 });
              updateData.licenseId = body.licenseId;
         }
-         if (body.serverID !== undefined && body.serverID !== ledgerEntry.serverID) {
-             const serverExists = await db.Server.findByPk(body.serverID);
-             if (!serverExists) return new NextResponse(`Server with ID ${body.serverID} not found.`, { status: 400 });
-             updateData.serverID = body.serverID;
+         if (body.serverId !== undefined && body.serverId !== ledgerEntry.serverId) {
+             const serverExists = await db.Server.findByPk(body.serverId);
+             if (!serverExists) return new NextResponse(`Server with ID ${body.serverId} not found.`, { status: 400 });
+             updateData.serverId = body.serverId;
         }
          if (body.licenseActionId !== undefined && body.licenseActionId !== ledgerEntry.licenseActionId) {
              const actionExists = await db.LicenseActionLookup.findByPk(body.licenseActionId);

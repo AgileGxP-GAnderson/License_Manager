@@ -113,7 +113,7 @@ describe('LicenseLedger API Routes', () => {
     it('should create a new license ledger entry successfully', async () => {
       const newLedgerData = {
         licenseId: testLicense.id,
-        serverID: testServer.id,
+        serverId: testServer.id,
         activityDate: faker.date.past(), // Date object
         licenseActionId: testAction.id,
         comment: faker.lorem.sentence(),
@@ -127,7 +127,7 @@ describe('LicenseLedger API Routes', () => {
       expect(response.status).toBe(201);
       expect(json).toHaveProperty('id');
       expect(json.licenseId).toBe(newLedgerData.licenseId);
-      expect(json.serverID).toBe(newLedgerData.serverID);
+      expect(json.serverId).toBe(newLedgerData.serverId);
       expect(json.licenseActionId).toBe(newLedgerData.licenseActionId);
       expect(json.comment).toBe(newLedgerData.comment);
       // Check included associations
@@ -142,7 +142,7 @@ describe('LicenseLedger API Routes', () => {
     });
 
      it('should return 400 if required fields are missing', async () => {
-        const incompleteData = { licenseId: testLicense.id, serverID: testServer.id };
+        const incompleteData = { licenseId: testLicense.id, serverId: testServer.id };
         const req = createMockNextRequest({ method: 'POST', body: incompleteData });
         const response = await licenseLedgersRoute.POST(req);
         expect(response.status).toBe(400);
@@ -151,7 +151,7 @@ describe('LicenseLedger API Routes', () => {
      it('should return 400 if foreign key does not exist', async () => {
         const ledgerData = {
             licenseId: 999999, // Non-existent license
-            serverID: testServer.id,
+            serverId: testServer.id,
             activityDate: new Date(), // Date object
             licenseActionId: testAction.id,
             expirationDate: '2025-12-31', // String format ok for DATEONLY
@@ -165,8 +165,8 @@ describe('LicenseLedger API Routes', () => {
   // --- Test GET /api/licenseLedgers ---
   describe('GET /api/licenseLedgers', () => {
      it('should return a list containing created ledger entries', async () => {
-        const ledger1 = await createLedgerViaApi({ licenseId: testLicense.id, serverID: testServer.id, activityDate: new Date(), licenseActionId: testAction.id, expirationDate: new Date('2026-01-01') }); // Use Date object
-        const ledger2 = await createLedgerViaApi({ licenseId: testLicense.id, serverID: testServer.id, activityDate: new Date(), licenseActionId: testAction.id, expirationDate: new Date('2027-01-01') }); // Use Date object
+        const ledger1 = await createLedgerViaApi({ licenseId: testLicense.id, serverId: testServer.id, activityDate: new Date(), licenseActionId: testAction.id, expirationDate: new Date('2026-01-01') }); // Use Date object
+        const ledger2 = await createLedgerViaApi({ licenseId: testLicense.id, serverId: testServer.id, activityDate: new Date(), licenseActionId: testAction.id, expirationDate: new Date('2027-01-01') }); // Use Date object
 
         const req = createMockNextRequest({ method: 'GET' });
         const response = await licenseLedgersRoute.GET(req);
@@ -183,7 +183,7 @@ describe('LicenseLedger API Routes', () => {
   // --- Test GET /api/licenseLedgers/:id ---
   describe('GET /api/licenseLedgers/:id', () => {
     it('should return a specific ledger entry if found', async () => {
-        const ledger = await createLedgerViaApi({ licenseId: testLicense.id, serverID: testServer.id, activityDate: new Date(), licenseActionId: testAction.id, expirationDate: new Date('2028-01-01'), comment: 'Fetch Me' }); // Use Date object
+        const ledger = await createLedgerViaApi({ licenseId: testLicense.id, serverId: testServer.id, activityDate: new Date(), licenseActionId: testAction.id, expirationDate: new Date('2028-01-01'), comment: 'Fetch Me' }); // Use Date object
         const req = createMockNextRequest({ method: 'GET' });
         const context = { params: { id: ledger.id.toString() } };
 
@@ -209,7 +209,7 @@ describe('LicenseLedger API Routes', () => {
    // --- Test PUT /api/licenseLedgers/:id ---
    describe('PUT /api/licenseLedgers/:id', () => {
         it('should update an existing ledger entry', async () => {
-            const ledger = await createLedgerViaApi({ licenseId: testLicense.id, serverID: testServer.id, activityDate: new Date(), licenseActionId: testAction.id, expirationDate: new Date('2029-01-01'), comment: 'Old Comment' }); // Use Date object
+            const ledger = await createLedgerViaApi({ licenseId: testLicense.id, serverId: testServer.id, activityDate: new Date(), licenseActionId: testAction.id, expirationDate: new Date('2029-01-01'), comment: 'Old Comment' }); // Use Date object
             const updateData = { comment: 'New Comment Updated' };
 
             const req = createMockNextRequest({ method: 'PUT', body: updateData });
@@ -230,7 +230,7 @@ describe('LicenseLedger API Routes', () => {
     // --- Test DELETE /api/licenseLedgers/:id ---
     describe('DELETE /api/licenseLedgers/:id', () => {
         it('should delete an existing ledger entry', async () => {
-            const ledger = await createLedgerViaApi({ licenseId: testLicense.id, serverID: testServer.id, activityDate: new Date(), licenseActionId: testAction.id, expirationDate: new Date('2030-01-01') }); // Use Date object
+            const ledger = await createLedgerViaApi({ licenseId: testLicense.id, serverId: testServer.id, activityDate: new Date(), licenseActionId: testAction.id, expirationDate: new Date('2030-01-01') }); // Use Date object
             const ledgerId = ledger.id;
 
             const req = createMockNextRequest({ method: 'DELETE' });

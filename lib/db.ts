@@ -137,11 +137,11 @@ function initializeDb(): Db {
   LicenseLedger.init({
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
       licenseId: { type: DataTypes.INTEGER, allowNull: false, references: { model: License, key: 'id' } },
-      serverID: { type: DataTypes.INTEGER, allowNull: false, references: { model: Server, key: 'id' }, field: 'serverID' },
+      serverId: { type: DataTypes.INTEGER, allowNull: true, references: { model: Server, key: 'id' }, field: 'serverId' },
       activityDate: { type: DataTypes.DATE, allowNull: false },
       licenseActionId: { type: DataTypes.INTEGER, allowNull: false, references: { model: LicenseActionLookup, key: 'id' } },
       comment: { type: DataTypes.STRING, allowNull: true },
-      expirationDate: { type: DataTypes.DATEONLY, allowNull: false },
+      expirationDate: { type: DataTypes.DATEONLY, allowNull: true },
       createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
       updatedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
   }, { sequelize: sequelizeConnection, tableName: 'LicenseLedger', timestamps: true });
@@ -201,7 +201,7 @@ function initializeDb(): Db {
   LicenseActionLookup.hasMany(LicenseLedger, { foreignKey: 'licenseActionId', as: 'ledgerEntries' });
 
   // Server associations
-  Server.hasMany(LicenseLedger, { foreignKey: 'serverID', as: 'ledgerEntries' });
+  Server.hasMany(LicenseLedger, { foreignKey: 'serverId', as: 'ledgerEntries' });
 
   // PurchaseOrder associations
   PurchaseOrder.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
@@ -217,7 +217,7 @@ function initializeDb(): Db {
 
   // LicenseLedger associations
   LicenseLedger.belongsTo(License, { foreignKey: 'licenseId', as: 'license' });
-  LicenseLedger.belongsTo(Server, { foreignKey: 'serverID', as: 'server' });
+  LicenseLedger.belongsTo(Server, { foreignKey: 'serverId', as: 'server' });
   LicenseLedger.belongsTo(LicenseActionLookup, { foreignKey: 'licenseActionId', as: 'licenseAction' });
 
   // POLicenseJoin associations

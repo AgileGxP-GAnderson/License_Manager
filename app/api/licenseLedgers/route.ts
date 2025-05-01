@@ -29,19 +29,19 @@ export async function POST(request: NextRequest) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
         const body: LicenseLedgerInput = await request.json();
-        const { licenseId, serverID, activityDate, licenseActionId, expirationDate } = body;
+        const { licenseId, serverId, activityDate, licenseActionId, expirationDate } = body;
 
         // Basic validation (adapted from createLicenseLedger)
-        if (licenseId === undefined || serverID === undefined || !activityDate || licenseActionId === undefined || !expirationDate) {
-            return new NextResponse('Missing required fields (licenseId, serverID, activityDate, licenseActionId, expirationDate)', { status: 400 });
+        if (licenseId === undefined || serverId === undefined || !activityDate || licenseActionId === undefined || !expirationDate) {
+            return new NextResponse('Missing required fields (licenseId, serverId, activityDate, licenseActionId, expirationDate)', { status: 400 });
         }
 
         // Validate foreign key existence
         const licenseExists = await db.License.findByPk(licenseId);
         if (!licenseExists) return new NextResponse(`License with ID ${licenseId} not found.`, { status: 400 });
 
-        const serverExists = await db.Server.findByPk(serverID);
-        if (!serverExists) return new NextResponse(`Server with ID ${serverID} not found.`, { status: 400 });
+        const serverExists = await db.Server.findByPk(serverId);
+        if (!serverExists) return new NextResponse(`Server with ID ${serverId} not found.`, { status: 400 });
 
         const actionExists = await db.LicenseActionLookup.findByPk(licenseActionId);
         if (!actionExists) return new NextResponse(`LicenseActionLookup with ID ${licenseActionId} not found.`, { status: 400 });

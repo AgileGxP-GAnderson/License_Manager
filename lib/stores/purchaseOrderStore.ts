@@ -552,7 +552,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
                 expirationDate: newLicense.expirationDate ? new Date(newLicense.expirationDate) : null,
                 // If your License type in the frontend *requires* duration, add it back here
                 // It might come from the response or you can use licenseData.duration
-                duration: newLicense.duration ?? licenseData.duration, // Example: Prefer response, fallback to input
+                duration: newLicense.totalDuration ?? licenseData.duration, // Example: Prefer response, fallback to input
             };
 
             set((state) => {

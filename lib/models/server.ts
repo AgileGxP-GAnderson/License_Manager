@@ -78,7 +78,7 @@ class Server extends Model<ServerAttributes, ServerInput> implements ServerAttri
 
   // Define static associate method if needed
   // public static associate(models: any) {
-  //    Server.hasMany(models.LicenseLedger, { foreignKey: 'serverID', as: 'ledgerEntries' });
+  //    Server.hasMany(models.LicenseLedger, { foreignKey: 'serverId', as: 'ledgerEntries' });
   // }
 }
 

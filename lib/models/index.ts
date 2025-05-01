@@ -38,7 +38,7 @@ LicenseActionLookup.hasMany(LicenseLedger, { foreignKey: 'licenseActionId', as: 
 // LicenseLedger.belongsTo(LicenseActionLookup, ...) is defined in licenseLedger.ts
 
 // Server associations
-Server.hasMany(LicenseLedger, { foreignKey: 'serverID', as: 'ledgerEntries' });
+Server.hasMany(LicenseLedger, { foreignKey: 'serverId', as: 'ledgerEntries' });
 // LicenseLedger.belongsTo(Server, ...) is defined in licenseLedger.ts
 
 // PurchaseOrder <-> License (Many-to-Many)

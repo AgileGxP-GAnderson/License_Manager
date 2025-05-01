@@ -8,11 +8,11 @@ import LicenseActionLookup, { LicenseActionLookupOutput } from './licenseActionL
 interface LicenseLedgerAttributes {
   id: number;
   licenseId: number;
-  serverID: number; // Note: Case matches SQL 'serverID'
+  serverId?: number; // Note: Case matches SQL 'serverId'
   activityDate: Date; // Changed from TIMESTAMP
   licenseActionId: number;
   comment?: string | null;
-  expirationDate: Date; // Changed from DATE
+  expirationDate?: Date; // Changed from DATE
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -27,11 +27,11 @@ export interface LicenseLedgerOutput extends Required<LicenseLedgerAttributes> {
 class LicenseLedger extends Model<LicenseLedgerAttributes, LicenseLedgerInput> implements LicenseLedgerAttributes {
   public id!: number;
   public licenseId!: number;
-  public serverID!: number;
+  public serverId?: number;
   public activityDate!: Date;
   public licenseActionId!: number;
-  public comment!: string | null;
-  public expirationDate!: Date;
+  public comment?: string | null;
+  public expirationDate?: Date;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -63,14 +63,14 @@ class LicenseLedger extends Model<LicenseLedgerAttributes, LicenseLedgerInput> i
             key: 'id',
           },
         },
-        serverID: { // Keep casing consistent with SQL definition
+        serverId: { // Keep casing consistent with SQL definition
           type: DataTypes.INTEGER,
-          allowNull: false,
+          allowNull: true,
           references: {
             model: Server,
             key: 'id',
           },
-          field: 'serverID', // Explicitly map to the 'serverID' column
+          field: 'serverId', // Explicitly map to the 'serverId' column
         },
         activityDate: {
           type: DataTypes.DATE, // Use DATE for TIMESTAMP WITHOUT TIME ZONE
@@ -90,7 +90,7 @@ class LicenseLedger extends Model<LicenseLedgerAttributes, LicenseLedgerInput> i
         },
         expirationDate: {
           type: DataTypes.DATEONLY, // Use DATEONLY for SQL DATE type
-          allowNull: false,
+          allowNull: true,
         },
         createdAt: {
           type: DataTypes.DATE,
@@ -112,7 +112,7 @@ class LicenseLedger extends Model<LicenseLedgerAttributes, LicenseLedgerInput> i
   // Define static associate method if needed
   // public static associate(models: any) {
   //    LicenseLedger.belongsTo(models.License, { foreignKey: 'licenseId', as: 'license' });
-  //    LicenseLedger.belongsTo(models.Server, { foreignKey: 'serverID', as: 'server' });
+  //    LicenseLedger.belongsTo(models.Server, { foreignKey: 'serverId', as: 'server' });
   //    LicenseLedger.belongsTo(models.LicenseActionLookup, { foreignKey: 'licenseActionId', as: 'licenseAction' });
   // }
 }
