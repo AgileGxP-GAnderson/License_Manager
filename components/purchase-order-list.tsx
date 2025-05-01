@@ -156,7 +156,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
   isAdminView = false,
 }) => {
   const { getServerById } = useServerStore()
-  const { activateLicense, addLicenseToPurchaseOrder } = usePurchaseOrderStore();
+  const { activateLicense, addLicenseToPurchaseOrder, fetchPurchaseOrdersByCustomerId } = usePurchaseOrderStore();
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
   const [isAddLicenseModalOpen, setIsAddLicenseModalOpen] = useState(false);
   const [currentPoIdForModal, setCurrentPoIdForModal] = useState<string | null>(null);
@@ -189,6 +189,13 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
       const addedLicense = await addLicenseToPurchaseOrder(licenseData);
       if (addedLicense) {
           handleCloseAddLicenseModal();
+          const currentPO = purchaseOrders.find(po => String(po.id) === String(licenseData.poId));
+          if (currentPO?.customerId) {
+              console.log(`Refetching POs for customer ${currentPO.customerId} after adding license.`);
+              await fetchPurchaseOrdersByCustomerId(currentPO.customerId);
+          } else {
+              console.warn("Could not find customerId to refetch purchase orders after adding license.");
+          }
       } else {
           console.error("Failed to save license (check store error state).");
           alert("Failed to save license. Please check the details and try again.");
