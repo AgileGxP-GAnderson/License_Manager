@@ -16,7 +16,7 @@ interface RouteContext {
 }
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
-    const { id } = params; 
+    const { id } = await params; 
     const db = getDbInstance();
     const transaction = await db.sequelize.transaction(); // Use the exported sequelize instance
 

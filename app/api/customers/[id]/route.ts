@@ -14,7 +14,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
-    const id = params.id;
+    const {id} = await params
     const customerId = parseInt(id, 10);
 
     if (isNaN(customerId)) {
