@@ -234,7 +234,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
     <Dialog open={isAddLicenseModalOpen} onOpenChange={setIsAddLicenseModalOpen}>
       <div className="space-y-4">
         {purchaseOrders.map((po) => (
-          <div key={po.id} className="border rounded-md">
+          <div key={po.id} className="border rounded-md shadow-sm overflow-hidden">
             <div
               className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50"
               onClick={() => toggleItem(po.id)}
@@ -264,60 +264,58 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
             </div>
 
             {openItems[po.id] && (
-              <div className="p-4 pt-0 border-t">
-                <h4 className="font-medium mb-2">Licenses</h4>
-                <Table>
-                   <TableHeader>
-                    <TableRow>
-                      <TableHead>License Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Activation Date</TableHead>
-                      <TableHead>Expiration Date</TableHead>
-                      <TableHead>Server</TableHead>
-                      {isAdminView ? <TableHead></TableHead> : null}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {po.licenses?.map((license, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{getLicenseTypeText(license.typeId)}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              license.status === "Activated"
-                                ? "default"
-                                : license.status === "Activation Requested"
-                                  ? "outline"
-                                  : "secondary"
-                            }
-                          >
-                            {license.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{getDurationText(license.totalDuration)}</TableCell>
-                        <TableCell>
-                          {license.activationDate ? formatDate(license.activationDate) : "Not activated"}
-                        </TableCell>
-                        <TableCell>
-                          {Number(license.typeId) === 2 ? "Perpetual" : formatDate(license.expirationDate)}
-                        </TableCell>
-                        <TableCell>
-                          {license.serverId ? (getServerById(license.serverId)?.name ?? "Server not found") : "None"}
-                        </TableCell>
-                        {isAdminView ? (
-                          <TableCell>
-                            {license.status === "Activation Requested" && (
-                              <Button size="sm" onClick={(e) => handleActivate(e, po.id, index)}>
-                                Activate
-                              </Button>
-                            )}
-                          </TableCell>
-                        ) : null}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="p-4 pt-2 border-t border-gray-200 bg-white">
+                {po.licenses && po.licenses.length > 0 ? (
+                    <Table>
+                       <TableHeader>
+                        <TableRow>
+                          <TableHead>License Type</TableHead>
+                          <TableHead>Status / Last Action</TableHead>
+                          <TableHead>Duration</TableHead>
+                          <TableHead>Last Activity Date</TableHead>
+                          <TableHead>Expiration Date</TableHead>
+                          <TableHead>Server Name</TableHead>
+                          {isAdminView ? <TableHead className="text-right">Actions</TableHead> : null}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {po.licenses.map((license, index) => (
+                          <TableRow key={license.id || index}>
+                            <TableCell>{license.type?.name ?? getLicenseTypeText(license.typeId)}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  license.status === "Activated" ? "default" :
+                                  license.status === "Activation Requested" ? "outline" :
+                                  license.status === "Expired" ? "destructive" :
+                                  "secondary"
+                                }
+                              >
+                                {license.lastActionName || license.status || 'N/A'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{getDurationText(license.totalDuration)}</TableCell>
+                            <TableCell>{formatDate(license.activationDate)}</TableCell>
+                            <TableCell>
+                              {license.type?.name === "Perpetual" ? "Perpetual" : formatDate(license.expirationDate)}
+                            </TableCell>
+                            <TableCell>{license.latestServerName ?? "None"}</TableCell>
+                            {isAdminView ? (
+                              <TableCell className="text-right">
+                                {license.status === "Activation Requested" && (
+                                  <Button variant="outline" size="sm" onClick={(e) => handleActivate(e, po.id, index)} className="h-7 px-2">
+                                    Activate
+                                  </Button>
+                                )}
+                              </TableCell>
+                            ) : null}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                ) : (
+                    <p className="text-sm text-gray-500 px-4 py-2">No licenses associated with this purchase order.</p>
+                )}
               </div>
             )}
           </div>

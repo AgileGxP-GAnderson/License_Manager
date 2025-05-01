@@ -1,98 +1,153 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getDbInstance } from '@/lib/db'; // Use the lazy initialization function
-import { PurchaseOrderInput } from '@/lib/models/purchaseOrder'; // Import input type
-import License from '@/lib/models/license'; // *** Import the License model ***
-import Customer from '@/lib/models/customer'; // Import Customer for association include & validation
+import { getDbInstance } from '@/lib/db';
+import { PurchaseOrderInput } from '@/lib/models/purchaseOrder';
+import License from '@/lib/models/license';
+import Customer from '@/lib/models/customer';
 import PurchaseOrder from '@/lib/models/purchaseOrder';
-import { WhereOptions, Sequelize } from 'sequelize'; // *** Import Sequelize ***
+import { WhereOptions, Sequelize } from 'sequelize';
+import LicenseLedger from '@/lib/models/licenseLedger';
+import Server from '@/lib/models/server';
+import LicenseActionLookup from '@/lib/models/licenseActionLookup';
+import LicenseTypeLookup from '@/lib/models/licenseTypeLookup'; // Import LicenseTypeLookup
+import POLicenseJoin from '@/lib/models/poLicenseJoin'; // Import the join model
 
-import db from '@/lib/models';
-
-// Handler for GET /api/purchaseOrders (Get POs, optionally filtered by customerId, including associated licenses with summed duration from join table)
+// Handler for GET /api/purchaseOrders
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const customerIdStr = searchParams.get('customerId');
   let customerId: number | null = null;
-  const whereClause: any = {}; // Define base where clause
-  console.log('[API_PURCHASE_ORDERS_GET] customerId:', customerIdStr); // Debugging log
+  const whereClause: WhereOptions<PurchaseOrder> = {};
+  console.log('[API_PURCHASE_ORDERS_GET] customerId:', customerIdStr);
 
   if (customerIdStr) {
     customerId = parseInt(customerIdStr, 10);
     if (!isNaN(customerId)) {
-      whereClause.customerId = customerId; // Add customerId to filter criteria
+      whereClause.customerId = customerId;
     } else {
-      // Handle invalid customerId if necessary
       return NextResponse.json({ message: 'Invalid customer ID format' }, { status: 400 });
     }
   }
 
   try {
-    // Fetch Purchase Orders and include associated Licenses with summed duration
-    const db = getDbInstance();
-    const sequelize = db.sequelize; // Get the Sequelize instance
-    const purchaseOrders = await db.PurchaseOrder.findAll({
-      where: whereClause, // Apply the filter
-      attributes: [ // *** Explicitly list PurchaseOrder attributes you need ***
+    const dbInstance = getDbInstance();
+    const sequelize = dbInstance.sequelize;
+
+    // Fetch Purchase Orders including Licenses and their latest Ledger entry
+    const purchaseOrdersData = await dbInstance.PurchaseOrder.findAll({
+      where: whereClause,
+      attributes: [
         'id',
         'poName',
         'purchaseDate',
         'customerId',
         'isClosed'
-        // Add any other PurchaseOrder fields you select
       ],
-      include: [{
-        model: License,
-        as: 'licenses', // *** Use the correct alias ***
-        attributes: [
-          // --- List the License attributes ---
-          'id',
-          'uniqueId',
-          'externalName',
-          'typeId',
-          // Add other License fields as needed...
-
-          // --- Calculate the SUM ---
-          // Ensure 'po_license_join.duration' is correct
-          [sequelize.literal(`SUM("licenses->POLicenseJoin"."duration")`), 'totalDuration']
-        ],
-        through: {
-          // Exclude join table attributes from the result object
-          attributes: []
+      include: [
+        {
+          model: Customer, // Include customer details if needed
+          as: 'customer',
+          attributes: ['id', 'businessName'] // Only select necessary fields
         },
-        // *** REMOVE 'group' from here ***
-      }],
-      // --- MOVE 'group' to the top level ---
-      group: [
-        // Group by all selected PurchaseOrder attributes
-        'PurchaseOrder.id', // Essential for grouping main model instances
-        'PurchaseOrder.poName',
-        'PurchaseOrder.purchaseDate',
-        'PurchaseOrder.customerId',
-        'PurchaseOrder.isClosed',
-        // Add any other selected PurchaseOrder fields here...
-
-        // Group by all selected non-aggregated License attributes
-        // Use the alias 'licenses.' here
-        'licenses.id',
-        'licenses.uniqueId',
-        'licenses.externalName',
-        'licenses.typeId'
-        // Add other selected non-aggregated License fields here...
-
-        // Grouping by join table keys might be needed depending on DB/exact setup
-        // Often grouping by the included model's PK ('licenses.id') is enough
-        // 'licenses->po_license_join.purchaseOrderId', // Syntax if needed
-        // 'licenses->po_license_join.licenseId',      // Syntax if needed
+        {
+          model: License,
+          as: 'licenses',
+          attributes: [
+            'id',
+            'uniqueId',
+            'externalName',
+            'typeId',
+            // Calculate total duration using the join table alias
+            // Note: This SUM might be complex with nested includes, consider calculating on frontend if issues arise
+            // Or fetch duration directly from the join table attributes below
+          ],
+          through: {
+            model: POLicenseJoin, // Specify the join model
+            as: 'poLicenseJoin', // Use the alias defined in associations
+            attributes: ['duration'] // Fetch duration directly from join table
+          },
+          required: false, // Use LEFT JOIN
+          include: [
+            {
+              model: LicenseTypeLookup, // Include License Type
+              as: 'type',
+              attributes: ['id', 'name'],
+              required: false,
+            },
+            {
+              model: LicenseLedger,
+              as: 'ledgerEntries',
+              attributes: ['serverId', 'activityDate', 'licenseActionId', 'expirationDate'], // Ensure licenseActionId is selected if needed elsewhere
+              required: false,
+              separate: true,
+              order: [['activityDate', 'DESC']],
+              limit: 1,
+              include: [ // Nested include within Ledger
+                {
+                  model: Server,
+                  as: 'server',
+                  attributes: ['id', 'name'],
+                  required: false
+                },
+                { // **** This part fetches the action name ****
+                  model: LicenseActionLookup,
+                  as: 'licenseAction', // Verify this alias matches your model association
+                  attributes: ['id', 'name'], // Selecting the 'name'
+                  required: false
+                }
+              ]
+            }
+          ]
+        }
       ],
-      order: [['purchaseDate', 'DESC']], // Corrected: Use actual column name
-      // subQuery: false, // Add if you face issues with LIMIT/OFFSET and grouping
+      order: [['purchaseDate', 'DESC'], ['poName', 'ASC']], // Example ordering
+      // No need for manual grouping if not aggregating directly in the main query
+      // No need for raw: true, process Sequelize instances
     });
 
-    return NextResponse.json(purchaseOrders);
+    // --- Process results to extract duration and flatten slightly for easier UI use ---
+    // Sequelize returns nested structure, we can adjust it slightly here
+    const processedPOs = purchaseOrdersData.map(poInstance => {
+        const poJson = poInstance.toJSON(); // Convert to plain object
+
+        poJson.licenses = poJson.licenses?.map((license: any) => {
+            // Extract duration from the join table data
+            const duration = license.poLicenseJoin?.duration;
+            // Get the latest ledger entry (if it exists)
+            const latestLedgerEntry = license.ledgerEntries?.[0];
+
+            // Determine status based on latest action (optional, can also do on UI)
+            let status = 'Available'; // Default
+            const actionName = latestLedgerEntry?.licenseAction?.name;
+            if (actionName === 'Activated') status = 'Activated';
+            else if (actionName === 'Activation Requested') status = 'Activation Requested';
+            else if (actionName === 'Deactivated') status = 'Available';
+            else if (actionName === 'Expired') status = 'Expired';
+            // Add more conditions as needed
+
+            return {
+                ...license,
+                totalDuration: duration, // Add duration directly
+                // Add derived/flattened fields for convenience
+                latestServerName: latestLedgerEntry?.server?.name ?? null,
+                lastActionName: actionName ?? 'Unknown', // Use 'Unknown' or 'N/A' as fallback
+                status: status, // Use derived status
+                activationDate: latestLedgerEntry?.activityDate ?? null, // Use latest activity date
+                expirationDate: latestLedgerEntry?.expirationDate ?? null, // Use ledger expiration date
+
+                // Optionally remove intermediate objects if not needed
+                poLicenseJoin: undefined,
+                ledgerEntries: undefined, // Remove original nested ledger entry if flattened fields are used
+            };
+        }) ?? [];
+
+        return poJson;
+    });
+
+
+    return NextResponse.json(processedPOs); // Return the processed data
 
   } catch (error) {
     console.error("Error fetching purchase orders:", error);
-    // Type assertion for error object if needed
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json({ message: 'Failed to fetch purchase orders', error: errorMessage }, { status: 500 });
   }

@@ -50,28 +50,33 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
 
     fetchPurchaseOrdersByCustomerId: async (customerId) => {
       if (!customerId) {
+        console.warn("fetchPurchaseOrdersByCustomerId called with no customerId.");
         set({ purchaseOrders: [], isLoadingPurchaseOrders: false, purchaseOrderError: null });
         return;
       }
       set({ isLoadingPurchaseOrders: true, purchaseOrderError: null });
       try {
-        // Assuming API endpoint exists and returns POs for a customer
+        // API now returns augmented data including latest ledger info (flattened)
         const response = await fetch(`/api/purchaseOrders?customerId=${customerId}`);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: `Failed to fetch purchase orders (${response.status})` }));
           throw new Error(errorData.message || `Failed to fetch purchase orders (${response.status})`);
         }
         const data: PurchaseOrder[] = await response.json();
-        // Process dates after fetching
+
+        // Process dates after fetching - ensure this handles strings from JSON
         const processedData = data.map(po => ({
             ...po,
-            purchaseDate: new Date(po.purchaseDate),
+            // Ensure purchaseDate is a Date object
+            purchaseDate: po.purchaseDate ? new Date(po.purchaseDate) : new Date(), // Provide a default or handle null
             licenses: po.licenses?.map(lic => ({
                 ...lic,
-                activationDate: lic.activationDate ? new Date(lic.activationDate) : undefined,
+                // Ensure activationDate and expirationDate (from flattened data) are Date objects or null/undefined
+                activationDate: lic.activationDate ? new Date(lic.activationDate) : null, // Use null instead of undefined for consistency
                 expirationDate: lic.expirationDate ? new Date(lic.expirationDate) : null,
-            }))
+            })) ?? [] // Ensure licenses is always an array
         }));
+
         set({ purchaseOrders: processedData, isLoadingPurchaseOrders: false });
       } catch (error: any) {
         console.error("Error fetching purchase orders:", error);

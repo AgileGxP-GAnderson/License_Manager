@@ -32,36 +32,50 @@ export interface Server {
 }
 
 export interface License {
-  status: string
-  typeId: number
-  totalDuration: string
-  activationDate?: Date
-  expirationDate?: Date | null
-  serverId?: string
+  id: number;
+  uniqueId: string;
+  externalName: string;
+  typeId: number;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+
+  // --- From Included Associations / Processing ---
+  type?: { // From LicenseTypeLookup
+    id: number;
+    name: string;
+  };
+  totalDuration?: number | null; // From POLicenseJoin
+
+  // --- Flattened from Latest Ledger Entry ---
+  latestServerName?: string | null;
+  lastActionName?: string | null; // Name of the latest action
+  status?: string | null; // Derived status ('Activated', 'Available', etc.)
+  activationDate?: Date | string | null; // Date of the latest activity
+  expirationDate?: Date | string | null; // Expiration from the latest ledger entry
+
+  // --- Original nested structure (alternative if not flattening in API) ---
+  // ledgerEntries?: Array<{
+  //   activityDate: Date | string;
+  //   expirationDate?: Date | string | null;
+  //   server?: { id: number; name: string } | null;
+  //   licenseAction?: { id: number; name: string } | null;
+  // }>;
 }
 
 export interface PurchaseOrder {
-  id: string
-  customerId: string
-  poName: string
-  purchaseDate: Date
-  licenses?: License[]
-  isClosed: boolean
+    id: string; // Assuming ID is string
+    poName: string;
+    purchaseDate: Date | string;
+    customerId: string; // Assuming ID is string
+    isClosed: boolean;
+    licenses?: License[]; // Array of associated licenses (now augmented)
+    customer?: { // Include customer details if needed
+        id: number;
+        businessName: string;
+    };
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
 }
-
-// // --- Customer Store State Interface ---
-// export interface CustomerState {
-//   customers: Customer[];
-//   selectedCustomer: Customer | null;
-//   loading: boolean;
-//   error: string | null;
-//   fetchCustomers: () => Promise<void>;
-//   fetchCustomerById: (id: string) => Promise<void>;
-//   createCustomer: (customer: Omit<Customer, 'id' | 'purchaseOrders'>) => Promise<void>; // Adjust Omit as needed
-//   updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
-//   deleteCustomer: (id: string) => Promise<void>;
-//   setSelectedCustomer: (customer: Customer | null) => void;
-// }
 
 // --- User Store State Interface ---
 // Adjust input types (Omit/Partial) based on the actual User model and API needs
@@ -70,22 +84,6 @@ export type UpdateUserInput = Partial<User>;
 
 export type PurchaseOrderInput = Omit<PurchaseOrder, 'id'>;
 export type UpdatePurchaseOrderInput = Partial<PurchaseOrder>;
-
-// export interface UserState {
-//   users: User[];
-//   selectedUser: User | null;
-//   loading: boolean;
-//   error: string | null;
-//   fetchUsers: () => Promise<void>;
-//   fetchUserById: (id: string) => Promise<void>;
-//   createUser: (user: CreateUserInput) => Promise<void>;
-//   updateUser: (id: string, user: UpdateUserInput) => Promise<void>;
-//   deleteUser: (id: string) => Promise<void>;
-//   // Assuming an action to fetch users specifically for a customer exists or is needed
-//   fetchUsersByCustomerId?: (customerId: string) => Promise<void>;
-//   setSelectedUser?: (user: User | null) => void; // Optional: if needed for direct setting
-// }
-
 
 // --- Existing Combined StoreState (Kept as requested) ---
 export interface StoreState {
