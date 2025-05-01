@@ -45,7 +45,7 @@ const perpetualDurationValue = 100;
 
 interface AddLicenseFormProps {
     poId: string;
-    onSave: (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration'>) => void;
+    onSave: (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration'>) => Promise<void>;
     onCancel: () => void;
 }
 
@@ -53,6 +53,7 @@ const AddLicenseForm: React.FC<AddLicenseFormProps> = ({ poId, onSave, onCancel 
     const [licenseTypeId, setLicenseTypeId] = useState<string>("");
     const [duration, setDuration] = useState<number | null>(null);
     const [isDurationDisabled, setIsDurationDisabled] = useState<boolean>(true);
+    const [isSaving, setIsSaving] = useState<boolean>(false);
 
     useEffect(() => {
         const typeIdNum = parseInt(licenseTypeId, 10);
@@ -67,7 +68,7 @@ const AddLicenseForm: React.FC<AddLicenseFormProps> = ({ poId, onSave, onCancel 
         }
     }, [licenseTypeId]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const typeIdNum = parseInt(licenseTypeId, 10);
         if (!typeIdNum || duration === null) {
@@ -79,7 +80,15 @@ const AddLicenseForm: React.FC<AddLicenseFormProps> = ({ poId, onSave, onCancel 
             typeId: typeIdNum,
             duration: duration,
         };
-        onSave(newLicenseData);
+
+        setIsSaving(true);
+        try {
+            await onSave(newLicenseData);
+        } catch (error) {
+            console.error("Error during save operation:", error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -88,7 +97,7 @@ const AddLicenseForm: React.FC<AddLicenseFormProps> = ({ poId, onSave, onCancel 
                 <Label htmlFor="license-type" className="text-right">
                     License Type *
                 </Label>
-                <Select value={licenseTypeId} onValueChange={setLicenseTypeId} required>
+                <Select value={licenseTypeId} onValueChange={setLicenseTypeId} required disabled={isSaving}>
                     <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Select type..." />
                     </SelectTrigger>
@@ -109,10 +118,10 @@ const AddLicenseForm: React.FC<AddLicenseFormProps> = ({ poId, onSave, onCancel 
                      value={duration !== null ? String(duration) : ""}
                      onValueChange={(value) => setDuration(value ? parseInt(value, 10) : null)}
                      required
-                     disabled={isDurationDisabled}
+                     disabled={isDurationDisabled || isSaving}
                  >
                      <SelectTrigger className="col-span-3">
-                         <SelectValue placeholder="Select duration..." />
+                         <SelectValue placeholder={isDurationDisabled ? (parseInt(licenseTypeId, 10) === 2 ? "Perpetual" : "Select type first...") : "Select duration..."} />
                      </SelectTrigger>
                      <SelectContent id="duration">
                          {parseInt(licenseTypeId, 10) === 1 && annualDurations.map(dur => (
@@ -130,9 +139,11 @@ const AddLicenseForm: React.FC<AddLicenseFormProps> = ({ poId, onSave, onCancel 
             </div>
             <DialogFooter>
                 <DialogClose asChild>
-                    <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+                    <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>Cancel</Button>
                 </DialogClose>
-                <Button type="submit">Save License</Button>
+                <Button type="submit" disabled={isSaving}>
+                    {isSaving ? "Saving..." : "Save License"}
+                </Button>
             </DialogFooter>
         </form>
     );
@@ -172,7 +183,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
     setCurrentPoIdForModal(null);
   };
 
-  const handleSaveLicense = async (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration'>) => {
+  const handleSaveLicense = async (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration'>): Promise<void> => {
     console.log("Saving license:", licenseData);
     try {
       const addedLicense = await addLicenseToPurchaseOrder(licenseData);
@@ -185,6 +196,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
     } catch (saveError: any) {
       console.error("Unexpected error during save license:", saveError);
       alert(`Error saving license: ${saveError.message || 'Unknown error'}`);
+      throw saveError;
     }
   };
 
