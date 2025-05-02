@@ -379,13 +379,11 @@ export default function CustomerPortal() {
                         </TableCell>
                         <TableCell className="font-medium">
                           <div className="flex items-center">
-                            <Server className="h-4 w-4 mr-2 text-brand-purple" />
-                            {server.description || "No description"}
+                            {server.description || "-"}
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">
                           <div>
-                            <Server className="h-4 w-4 mr-2 text-brand-purple" />
                             {server.fingerprint}
                           </div>
                         </TableCell>
