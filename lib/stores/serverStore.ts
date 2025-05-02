@@ -1,43 +1,28 @@
 import { create } from 'zustand';
-import type { Server } from '@/lib/types'; // Adjust import path if needed
+import { Server, ServerState } from '@/lib/types'; // Adjust path if needed
 
-// 1. Define the interface for Server state and actions
-interface ServerState {
-  servers: Server[];
-  loading: boolean;
-  error: string | null;
-  fetchServersByCustomerId: (customerId: string) => Promise<void>;
-  createServer: (customerId: string, serverData: Omit<Server, 'id' | 'customerId'>) => Promise<Server | null>; // Return created server or null on error
-  // Optional: Add actions for update, delete if needed
-  // updateServer: (id: string, serverData: Partial<Server>) => Promise<Server | null>; // Return updated server
-  // deleteServer: (id: string) => Promise<void>;
-  getServerById: (id: string) => Server | undefined; // Helper to get server from state
-  clearServers: () => void; // To clear state when customer changes
-}
-
-// 2. Create the store using the defined type
 export const useServerStore = create<ServerState>((set, get) => ({
-  // Initial state
   servers: [],
   loading: false,
   error: null,
 
-  // Action: Fetch Servers
-  fetchServersByCustomerId: async (customerId: string) => {
-    // ... existing implementation ...
+  // Action: Fetch Servers by Customer ID
+  fetchServersByCustomerId: async (customerId) => {
     if (!customerId) {
-      set({ servers: [], loading: false, error: null }); // Clear if no customerId
+      console.warn("fetchServersByCustomerId called with no customerId.");
+      set({ servers: [], loading: false, error: null }); // Clear servers if no ID
       return;
     }
     set({ loading: true, error: null });
     try {
-      // Adjust API endpoint as needed
+      // Assuming the API endpoint supports filtering by customerId via query param
       const response = await fetch(`/api/servers?customerId=${customerId}`);
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to fetch servers');
+        const errorData = await response.json().catch(() => ({ message: `Failed to fetch servers (${response.status})` }));
+        throw new Error(errorData.message || `Failed to fetch servers (${response.status})`);
       }
       const data: Server[] = await response.json();
+      // Assuming the API returns servers without the fingerprint
       set({ servers: data, loading: false });
     } catch (error) {
       let errorMessage = 'An unknown error occurred while fetching servers.';
@@ -49,26 +34,28 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-    // Action: Create Server
-  createServer: async (customerId: string, serverData: Omit<Server, 'id' | 'customerId'>): Promise<Server | null> => {
-    if (!customerId) {
+  // Action: Create Server
+  createServer: async (customerId, serverData) => {
+    console.log("Creating server with data:", serverData);
+    const customerIdNum = typeof customerId === 'string' ? parseInt(customerId, 10) : customerId;
+    if (!customerIdNum) {
         const errorMsg = "Cannot create server: Customer ID is missing.";
         console.error(errorMsg);
-        set({ error: errorMsg, loading: false }); // Set error state
+        set({ error: errorMsg, loading: false });
         return null;
     }
-    set({ loading: true, error: null }); // Indicate loading started
+    set({ loading: true, error: null });
     try {
       const payload = {
         ...serverData,
-        customerId: customerId, // Add customerId to the payload
+        customerId: customerIdNum,
+        // Handle fingerprint conversion if needed (e.g., to base64 string)
+        // fingerprint: typeof serverData.fingerprint === 'string' ? serverData.fingerprint : serverData.fingerprint.toString('base64'),
       };
-
-      const response = await fetch('/api/servers', { // Adjust API endpoint if needed
+      console.log("Payload for server creation:", payload);
+      const response = await fetch('/api/servers', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -78,34 +65,38 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }
 
       const newServer: Server = await response.json();
+      // +++ Add logging here +++
+      console.log("API returned new server:", newServer);
 
-      // Add the new server to the state
-      set((state) => ({
-        servers: [...state.servers, newServer],
-        loading: false, // Reset loading state
-      }));
-
-      return newServer; // Return the newly created server
-
-    } catch (error) {
-      let errorMessage = 'An unknown error occurred while creating the server.';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      console.error("Error creating server:", errorMessage, error);
-      set({ error: errorMessage, loading: false }); // Set error and reset loading
-      return null; // Return null on error
+      set((state) => {
+        const updatedServers = [...state.servers, newServer];
+        // +++ Add logging here +++
+        console.log("Store state updated. New allServers count:", updatedServers.length, updatedServers);
+        return {
+          servers: updatedServers,
+          loading: false,
+        };
+      });
+      return newServer;
+    } catch (error: any) { // Use 'any' or a more specific error type
+        let errorMessage = 'An unknown error occurred while creating the server.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+        console.error("Error creating server:", errorMessage, error);
+        set({ error: errorMessage, loading: false }); // Set error and reset loading
+        return null; // Return null on error
     }
   },
 
-  // Helper function to get a server from the current state
-  getServerById: (id: string) => {
-    return get().servers.find(server => server.id === id);
+  // Selector: Get Server by ID
+  getServerById: (id) => {
+    const serverIdNum = typeof id === 'string' ? parseInt(id, 10) : id;
+    return get().servers.find((server) => server.id === serverIdNum);
   },
 
-  // Optional: Implement updateServer, deleteServer similarly...
-
-  clearServers: () => {
-    set({ servers: [], loading: false, error: null });
-  },
+  // Action: Clear Servers
+  clearServers: () => set({ servers: [], loading: false, error: null }),
 }));

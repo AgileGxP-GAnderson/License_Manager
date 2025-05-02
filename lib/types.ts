@@ -25,11 +25,16 @@ export interface User {
 }
 
 export interface Server {
-  id: string
-  customerId: string
-  name: string
-  fingerprint: string
-  isActive: boolean
+  id: number;
+  customerId: number;
+  name: string;
+  description?: string | null;
+  // Fingerprint might be string (base64) in frontend/API, Buffer in backend
+  fingerprint: string | Buffer;
+  isActive: boolean;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  // Add other related fields if needed (e.g., from associations)
 }
 
 export interface License {
@@ -129,4 +134,16 @@ export interface StoreState {
   fetchUsersForCustomer: (customerId: string) => Promise<void>; // Renamed for clarity
 
   isUsernameUnique: (username: string) => boolean
+}
+
+// --- Server Store State Interface ---
+export interface ServerState {
+  servers: Server[];
+  loading: boolean;
+  error: string | null;
+  // Ensure customerId type matches usage (string | number)
+  createServer: (customerId: string | number, serverData: Omit<Server, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Server | null>;
+  fetchServersByCustomerId: (customerId: string | number) => Promise<void>;
+  getServerById: (id: string | number) => Server | undefined;
+  clearServers: () => void;
 }

@@ -98,21 +98,33 @@ export default function CustomerPortal() {
 
   // --- useEffect to update local filtered state when store data changes ---
   useEffect(() => {
-    if (customer?.id) {
-      // Filter data from the stores based on the current customer ID
-      // Option A: Use selectors if available
-      // setCustomerPurchaseOrders(getPurchaseOrdersByCustomerId(customer.id));
-      // setCustomerServers(getServersByCustomerId(customer.id));
+    console.log("Data filter useEffect triggered. Customer:", customer?.id);
+    console.log("allServers:", allServers);
+    console.log("allPurchaseOrders:", allPurchaseOrders);
 
-      // Option B: Filter manually
-      setCustomerPurchaseOrders(allPurchaseOrders.filter(po => String(po.customerId) === String(customer.id)));
-      setCustomerServers(allServers.filter(srv => String(srv.customerId) === String(customer.id)));
+    if (customer?.id) {
+      // Filter Servers
+      const filteredServers = allServers.filter(srv => {
+        console.log(`Filtering server ID ${srv.id}, customerId: ${srv.customerId}, Comparing with: ${customer.id}`);
+        return String(srv.customerId) === String(customer.id);
+      });
+      console.log("Filtered servers:", filteredServers);
+      setCustomerServers(filteredServers);
+
+      // +++ Filter Purchase Orders +++
+      const filteredPOs = allPurchaseOrders.filter(po => {
+         console.log(`Filtering PO ID ${po.id}, customerId: ${po.customerId}, Comparing with: ${customer.id}`);
+         return String(po.customerId) === String(customer.id);
+      });
+      console.log("Filtered POs:", filteredPOs);
+      setCustomerPurchaseOrders(filteredPOs);
 
     } else {
-      setCustomerPurchaseOrders([]);
-      setCustomerServers([]);
+      console.log("No customer ID, clearing local lists.");
+      setCustomerPurchaseOrders([]); // Clear POs
+      setCustomerServers([]);      // Clear Servers
     }
-    // Depend on the full lists from the stores and the customer object
+    // Dependencies remain the same
   }, [customer, allPurchaseOrders, allServers]);
 
 
@@ -136,14 +148,22 @@ export default function CustomerPortal() {
   // --- Server Registration ---
   const handleServerRegistration = async (name: string, fingerprint: string) => {
     if (customer?.id) {
-      // +++ Call createServer with correct arguments +++
+      const customerIdNum = parseInt(customer.id, 10); // Convert string ID to number
+
+      if (isNaN(customerIdNum)) {
+          console.error("Cannot register server: Invalid Customer ID format.");
+          // Optionally set an error state for the UI
+          return; // Stop if ID is not a valid number
+      }
+
+      // Pass customerId as the first argument, server data as the second
       await createServer(
-        customer.id, // Pass customerId as the first argument
-        {
+        customerIdNum, // First argument (now number)
+        {             // Second argument
+          customerId: customerIdNum, // Pass customer ID (now number)
           name,
           fingerprint,
-          isActive: true, // Add isActive, defaulting to true
-          // Add other required fields from Omit<Server, 'id' | 'customerId'> if any
+          isActive: true
         }
       );
       // Refetching/state update is handled by the store or useEffects
@@ -264,12 +284,9 @@ export default function CustomerPortal() {
                     <TableHeader className="bg-brand-purple/5">
                       {/* ... TableHead ... */}
                     </TableHeader>
-                    <TableBody>{/* Use customerPurchaseOrders */}
-                      {customerPurchaseOrders.flatMap((po) =>
+                    <TableBody>{customerPurchaseOrders.flatMap((po) =>
                         po.licenses?.map((license: any, licenseIndex: number) => ( // Add type safety for license if possible
-                          // +++ Add key prop to the Fragment +++
                           <React.Fragment key={`${po.id}-${license.id || licenseIndex}`}> {/* Use license.id if available, fallback to index */}
-                            {/* --- Remove key prop from TableRow --- */}
                             <TableRow className="hover:bg-brand-purple/5">
                               {/* Use license.type?.name */}
                               <TableCell>{license.type?.name ?? 'Unknown Type'}</TableCell>
@@ -318,7 +335,7 @@ export default function CustomerPortal() {
                               </TableCell>
                             </TableRow>
                             {/* ... Activated license message row (if any) ... */}
-                          </React.Fragment> // Use full React.Fragment syntax for key prop
+                          </React.Fragment>
                         )),
                       )}
                     </TableBody>

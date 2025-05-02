@@ -126,6 +126,7 @@ function initializeDb(): Db {
 
   Server.init({
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+      customerId: { type: DataTypes.INTEGER, allowNull: false, references: { model: Customer, key: 'id' } },
       name: { type: DataTypes.STRING, allowNull: false, unique: true },
       description: { type: DataTypes.STRING, allowNull: true },
       fingerprint: { type: DataTypes.BLOB, allowNull: false, unique: true },
