@@ -1,39 +1,104 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { useStore } from "@/lib/store"
-import type { Server } from "@/lib/types"
+import React, { useState, useEffect } from 'react'; // Import useEffect
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Server } from '@/lib/types';
+import { useServerStore } from '@/lib/stores/serverStore'; // Import the server store hook
 
 interface ServerSelectionModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (serverId: string) => void
-  customerId: string
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (serverId: string) => void | Promise<void>;
+  customerId: string; // Assuming customerId is passed as a prop
 }
 
-export default function ServerSelectionModal({ isOpen, onClose, onSubmit, customerId }: ServerSelectionModalProps) {
-  const { getServersByCustomerId } = useStore()
-  const servers = getServersByCustomerId(customerId)
-  const [selectedServerId, setSelectedServerId] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+const ServerSelectionModal: React.FC<ServerSelectionModalProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  customerId // Destructure customerId
+}) => {
+  // Select individual state pieces to prevent unnecessary re-renders
+  const servers = useServerStore(state => state.servers);
+  const fetchServersByCustomerId = useServerStore(state => state.fetchServersByCustomerId);
+  const isLoadingServers = useServerStore(state => state.isLoadingServers);
+  const serverError = useServerStore(state => state.serverError);
 
-  const handleSubmit = () => {
-    if (!selectedServerId) return
+  const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    setIsSubmitting(true)
-    try {
-      onSubmit(selectedServerId)
-      setSelectedServerId(null)
-      onClose()
-    } catch (error) {
-      console.error("Error selecting server:", error)
-    } finally {
-      setIsSubmitting(false)
+  // Fetch servers when the modal opens or customerId changes
+  useEffect(() => {
+    if (isOpen && customerId) {
+      fetchServersByCustomerId(customerId);
     }
+  }, [isOpen, customerId, fetchServersByCustomerId]); // Add dependencies
+
+  const handleSubmit = async () => { // Make async
+    if (!selectedServerId) return;
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit(selectedServerId); // Await the submission logic
+      setSelectedServerId(null);
+      onClose();
+    } catch (error) {
+      console.error("Error selecting server:", error);
+      // Optionally display an error message to the user
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- Render Logic ---
+
+  let content: React.ReactNode;
+
+  if (isLoadingServers) {
+    content = <div className="py-6 text-center text-muted-foreground">Loading servers...</div>;
+  } else if (serverError) {
+    content = <div className="py-6 text-center text-red-600">Error loading servers: {serverError}</div>;
+  } else if (servers.length === 0) {
+    content = (
+      <div className="py-6 text-center">
+        <p className="text-muted-foreground">No servers registered yet.</p>
+        <p className="text-sm mt-2">Please register a server first.</p>
+      </div>
+    );
+  } else {
+    // Use the 'servers' array from the store state
+    content = (
+      <>
+        <p className="text-sm mb-3">Select a server to activate this license:</p>
+        <RadioGroup value={selectedServerId || ""} onValueChange={setSelectedServerId}>
+          <div className="space-y-3 max-h-60 overflow-y-auto pr-2"> {/* Add scroll */}
+            {servers.map((server) => (
+              <div
+                key={server.id}
+                className="flex items-center space-x-2 border p-3 rounded-md hover:bg-muted/50"
+              >
+                <RadioGroupItem value={String(server.id)} id={String(server.id)} />
+                <Label htmlFor={String(server.id)} className="flex-1 cursor-pointer">
+                  <div className="font-medium">{server.name}</div>
+                  {/* Display fingerprint if needed, handle potential null/undefined */}
+                  {/* <div className="text-xs text-muted-foreground truncate">{server.fingerprint ?? 'N/A'}</div> */}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </RadioGroup>
+      </>
+    );
   }
 
   return (
@@ -45,32 +110,7 @@ export default function ServerSelectionModal({ isOpen, onClose, onSubmit, custom
         </DialogHeader>
 
         <div className="flex-1 py-4 overflow-auto">
-          {servers.length === 0 ? (
-            <div className="py-6 text-center">
-              <p className="text-muted-foreground">No servers registered yet.</p>
-              <p className="text-sm mt-2">Please register a server first.</p>
-            </div>
-          ) : (
-            <>
-              <p className="text-sm mb-3">Select a server to activate this license:</p>
-              <RadioGroup value={selectedServerId || ""} onValueChange={setSelectedServerId}>
-                <div className="space-y-3">
-                  {servers.map((server: Server) => (
-                    <div
-                      key={server.id}
-                      className="flex items-center space-x-2 border p-3 rounded-md hover:bg-muted/50"
-                    >
-                      <RadioGroupItem value={server.id} id={server.id} />
-                      <Label htmlFor={server.id} className="flex-1 cursor-pointer">
-                        <div className="font-medium">{server.name}</div>
-                        <div className="text-xs text-muted-foreground truncate">{server.fingerprint}</div>
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </RadioGroup>
-            </>
-          )}
+          {content}
         </div>
 
         {/* Explicit footer with high z-index and clear styling */}
@@ -84,5 +124,7 @@ export default function ServerSelectionModal({ isOpen, onClose, onSubmit, custom
         </div>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};
+
+export default ServerSelectionModal;

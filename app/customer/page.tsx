@@ -387,7 +387,7 @@ export default function CustomerPortal() {
                             {server.fingerprint}
                           </div>
                         </TableCell>
-                      </TableRow>
+                        </TableRow>
                     ))}
                   </TableBody>
                 </Table>
