@@ -23,6 +23,7 @@ import ServerSelectionModal from "@/components/server-selection-modal"
 import LicenseDownloadModal from "@/components/license-download-modal"
 import LicenseDeactivationModal from "@/components/license-deactivation-modal"
 import Link from "next/link"
+import { assert } from "console";
 
 
 export default function CustomerPortal() {
@@ -370,7 +371,24 @@ export default function CustomerPortal() {
                     {/* Use customerServers */}
                     {customerServers.map((server) => (
                       <TableRow key={server.id} className="hover:bg-brand-purple/5">
-                        {/* ... Server details ... */}
+                         <TableCell className="font-medium">
+                          <div className="flex items-center">
+                            <Server className="h-4 w-4 mr-2 text-brand-purple" />
+                            {server.name}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center">
+                            <Server className="h-4 w-4 mr-2 text-brand-purple" />
+                            {server.description || "No description"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div>
+                            <Server className="h-4 w-4 mr-2 text-brand-purple" />
+                            {server.fingerprint}
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
