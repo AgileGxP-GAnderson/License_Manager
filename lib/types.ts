@@ -29,6 +29,7 @@ export interface Server {
   customerId: string
   name: string
   fingerprint: string
+  isActive: boolean
 }
 
 export interface License {
