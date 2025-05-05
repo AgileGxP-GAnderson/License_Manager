@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useServerStore } from "@/lib/stores/serverStore"
 import { usePurchaseOrderStore } from "@/lib/stores/purchaseOrderStore"
+import { useLicenseStore } from "@/lib/stores/licenseStore"
 import { PurchaseOrder, License, LicenseInput } from '@/lib/types';
 
 interface PurchaseOrderListProps {
@@ -157,6 +158,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
 }) => {
   const { getServerById } = useServerStore()
   const { activateLicense, addLicenseToPurchaseOrder, fetchPurchaseOrdersByCustomerId } = usePurchaseOrderStore();
+  const { updateLicense, deactivateLicense, hasUnsavedChanges } = useLicenseStore();
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
   const [isAddLicenseModalOpen, setIsAddLicenseModalOpen] = useState(false);
   const [currentPoIdForModal, setCurrentPoIdForModal] = useState<string | null>(null);

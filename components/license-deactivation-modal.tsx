@@ -5,7 +5,8 @@ import type React from "react"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useStore } from "@/lib/store"
+import { useLicenseStore } from "@/lib/stores/licenseStore"
+import { usePurchaseOrderStore } from "@/lib/stores/purchaseOrderStore"
 import { Upload } from "lucide-react"
 
 interface LicenseDeactivationModalProps {
@@ -14,8 +15,13 @@ interface LicenseDeactivationModalProps {
   customerId: string
 }
 
-export default function LicenseDeactivationModal({ isOpen, onClose, customerId }: LicenseDeactivationModalProps) {
-  const { getPurchaseOrdersByCustomerId, deactivateLicense } = useStore()
+export default function LicenseDeactivationModal({
+  isOpen,
+  onClose,
+  customerId
+}: LicenseDeactivationModalProps) {
+  const { getPurchaseOrdersByCustomerId } = usePurchaseOrderStore()
+  const { deactivateLicense } = useLicenseStore()
   const [isUploading, setIsUploading] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -34,23 +40,19 @@ export default function LicenseDeactivationModal({ isOpen, onClose, customerId }
     setIsUploading(true)
     try {
       const file = fileInputRef.current.files[0]
-
-      // In a real application, we would parse the file and deactivate the licenses
-      // For this prototype, we'll simulate by deactivating a random license
-
       const purchaseOrders = getPurchaseOrdersByCustomerId(customerId)
 
-      // Find the first activated license to deactivate as a simulation
+      // Find first activated license to deactivate
       for (const po of purchaseOrders) {
-        for (let i = 0; i < po.licenses.length; i++) {
-          if (po.licenses[i].status === "Activated") {
-            deactivateLicense(po.id, i)
+        for (const license of po.licenses) {
+          if (license.status === "Activated") {
+            deactivateLicense(license.id, po.id)
             break
           }
         }
       }
 
-      // Close the modal after successful upload
+      // Close modal after successful upload
       setTimeout(() => {
         setFileName(null)
         onClose()
@@ -67,38 +69,43 @@ export default function LicenseDeactivationModal({ isOpen, onClose, customerId }
       <DialogContent className="sm:max-w-[425px] flex flex-col">
         <DialogHeader>
           <DialogTitle>Deactivate Licenses</DialogTitle>
-          <DialogDescription>Upload file generated in Agile Studio with retired licenses.</DialogDescription>
+          <DialogDescription>
+            Upload your deactivation file to process license deactivations.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 py-4 overflow-auto">
-          <div className="border-2 border-dashed rounded-md p-6 text-center">
-            <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm mb-2">Click to browse or drag and drop</p>
+        <div className="flex-1 py-4">
+          <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:border-brand-purple/50 transition-colors">
             <input
               type="file"
               className="hidden"
-              accept=".json,.txt"
-              onChange={handleFileChange}
               ref={fileInputRef}
-              id="license-file-upload"
+              onChange={handleFileChange}
+              accept=".json"
             />
-            <Button type="button" variant="outline" className="mt-2" onClick={() => fileInputRef.current?.click()}>
-              Select File
-            </Button>
-            {fileName && (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Selected: <span className="font-medium">{fileName}</span>
-              </p>
-            )}
+            <Upload
+              className="h-8 w-8 mb-2 text-brand-purple"
+              onClick={() => fileInputRef.current?.click()}
+            />
+            <p className="text-sm text-center text-muted-foreground mb-1">
+              {fileName ? fileName : "Click to upload deactivation file"}
+            </p>
+            <p className="text-xs text-center text-muted-foreground">
+              Supports JSON files
+            </p>
           </div>
         </div>
 
-        <div className="border-t mt-6 pt-4 flex justify-end gap-2 bg-background sticky bottom-0 z-10">
-          <Button type="button" variant="outline" onClick={onClose}>
+        <div className="flex justify-end space-x-2 pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleUpload} disabled={isUploading || !fileName}>
-            {isUploading ? "Processing..." : "Submit"}
+          <Button
+            onClick={handleUpload}
+            disabled={!fileName || isUploading}
+            className="bg-brand-purple hover:bg-brand-purple/90"
+          >
+            {isUploading ? "Processing..." : "Upload & Deactivate"}
           </Button>
         </div>
       </DialogContent>

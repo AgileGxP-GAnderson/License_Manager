@@ -47,7 +47,7 @@ interface Db {
 let cachedDb: Db | null = null;
 
 // --- Initialization Function ---
-function initializeDb(): Db {
+  function initializeDb(): Db {
   console.log('Initializing DB connection and models...'); // Add log for debugging
 
   if (!dbName || !dbUser || !dbHost || dbPassword === undefined) {

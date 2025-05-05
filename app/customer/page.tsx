@@ -18,21 +18,24 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Server } from 'lucide-react'
 // +++ Import specific types from types.ts +++
 import { Customer, PurchaseOrder, Server as ServerType } from "@/lib/types" // Rename Server to ServerType to avoid conflict
+import { useToast } from "@/components/ui/use-toast";
 import ServerRegistrationModal from "@/components/server-registration-modal"
 import ServerSelectionModal from "@/components/server-selection-modal"
 import LicenseDownloadModal from "@/components/license-download-modal"
 import LicenseDeactivationModal from "@/components/license-deactivation-modal"
 import Link from "next/link"
 import { assert } from "console";
-
+import { useLicenseStore } from "@/lib/stores/licenseStore";
 
 export default function CustomerPortal() {
+  const { toast } = useToast();
+  
   // --- Get state/actions from the customer store ---
   const {
-    selectedCustomer: customer, // Assuming selectedCustomer holds the full object now
-    isLoading: customerLoading, // Assuming isLoading is for customer loading
-    error: customerError,       // Assuming error is for customer loading
-    fetchCustomerById,         // Assuming this action exists
+    selectedCustomer: customer,
+    loading: customerLoading,
+    error: customerError,
+    fetchCustomerById,
   } = useCustomerStore();
 
   // --- Get state/actions from the purchase order store ---
@@ -42,18 +45,31 @@ export default function CustomerPortal() {
     purchaseOrderError,               // Error state for POs
     fetchPurchaseOrdersByCustomerId,  // Action to fetch POs
     getPurchaseOrdersByCustomerId,    // Selector to filter POs (if needed, or filter manually)
-    updateLicense,                    // Action to update a license
     // Add other PO actions if used (e.g., activateLicense, requestLicenseActivation)
   } = usePurchaseOrderStore();
 
+  // --- Get state/actions from the license store ---
+  const {
+    licenses,
+    pendingChanges,
+    isLoadingLicenses,
+    licenseError,
+    updateLicense,
+    activateLicense,
+    deactivateLicense,
+    hasUnsavedChanges,
+    saveChanges,
+    discardChanges,
+  } = useLicenseStore();
+
   // --- Get state/actions from the server store ---
   const {
-    servers: allServers, // Get all servers from the store
-    isLoadingServers,     // Loading state for servers
-    serverError,          // Error state for servers
-    fetchServersByCustomerId, // Action to fetch servers
-    getServerById,          // Selector to get a specific server
-    createServer,              // Action to add a server
+    servers: allServers,
+    loading: isLoadingServers,
+    error: serverError,
+    fetchServersByCustomerId,
+    getServerById,
+    createServer,
   } = useServerStore();
 
 
@@ -80,53 +96,49 @@ export default function CustomerPortal() {
 
   // --- useEffect to fetch data when customer ID changes ---
   useEffect(() => {
-    // Assuming currentCustomerId is managed elsewhere or passed as prop/context
-    // If customer object is directly available from useCustomerStore, use its ID
-    const customerId = customer?.id; // Use ID from the selected customer object
+    const customerId = customer?.id;
 
     if (customerId) {
-      // Fetch data using actions from respective stores
+      console.log("Fetching data for customer:", customerId);
       fetchPurchaseOrdersByCustomerId(customerId);
       fetchServersByCustomerId(customerId);
     } else {
-      // Clear local filtered data if no customer is selected
+      console.log("No customer ID, clearing local lists");
       setCustomerPurchaseOrders([]);
       setCustomerServers([]);
-      // Optionally clear store data if needed via actions like clearPurchaseOrders(), clearServers()
     }
-  }, [customer, fetchPurchaseOrdersByCustomerId, fetchServersByCustomerId]); // Depend on customer object and fetch actions
+  }, [customer?.id, fetchPurchaseOrdersByCustomerId, fetchServersByCustomerId]);
 
   // --- useEffect to update local filtered state when store data changes ---
   useEffect(() => {
-    console.log("Data filter useEffect triggered. Customer:", customer?.id);
-    console.log("allServers:", allServers);
+    console.log("Data filter useEffect triggered.");
     console.log("allPurchaseOrders:", allPurchaseOrders);
+    console.log("allServers:", allServers);
 
     if (customer?.id) {
-      // Filter Servers
-      const filteredServers = allServers.filter(srv => {
-        console.log(`Filtering server ID ${srv.id}, customerId: ${srv.customerId}, Comparing with: ${customer.id}`);
-        return String(srv.customerId) === String(customer.id);
-      });
-      console.log("Filtered servers:", filteredServers);
-      setCustomerServers(filteredServers);
-
-      // +++ Filter Purchase Orders +++
+      // Filter Purchase Orders
       const filteredPOs = allPurchaseOrders.filter(po => {
-         console.log(`Filtering PO ID ${po.id}, customerId: ${po.customerId}, Comparing with: ${customer.id}`);
-         return String(po.customerId) === String(customer.id);
+        const matches = String(po.customerId) === String(customer.id);
+        console.log(`PO ${po.id}: Customer ID match? ${matches}`);
+        return matches;
       });
       console.log("Filtered POs:", filteredPOs);
       setCustomerPurchaseOrders(filteredPOs);
 
+      // Filter Servers
+      const filteredServers = allServers.filter(srv => {
+        const matches = String(srv.customerId) === String(customer.id);
+        console.log(`Server ${srv.id}: Customer ID match? ${matches}`);
+        return matches;
+      });
+      console.log("Filtered servers:", filteredServers);
+      setCustomerServers(filteredServers);
     } else {
-      console.log("No customer ID, clearing local lists.");
-      setCustomerPurchaseOrders([]); // Clear POs
-      setCustomerServers([]);      // Clear Servers
+      console.log("No customer ID, clearing local lists");
+      setCustomerPurchaseOrders([]);
+      setCustomerServers([]);
     }
-    // Dependencies remain the same
-  }, [customer, allPurchaseOrders, allServers]);
-
+  }, [customer?.id, allPurchaseOrders, allServers]);
 
   // --- Modal Handlers ---
   const openServerSelectionModal = (poId: string, licenseIndex: number) => {
@@ -182,24 +194,25 @@ export default function CustomerPortal() {
 
       // Find the correct PO and license from the filtered local state
       const po = customerPurchaseOrders.find((p) => String(p.id) === String(poId));
+      
+      // Find the license ID from the PO
       const license = po?.licenses?.[licenseIndex];
-
-      // Use totalDuration if available, otherwise fallback logic might be needed
-      if (license && license.totalDuration && license.totalDuration !== 100 /* perpetualDurationValue */) {
-        // Assuming totalDuration is in years
-        expirationDate = new Date(now);
-        expirationDate.setFullYear(expirationDate.getFullYear() + license.totalDuration);
+      if (!license?.id) {
+        console.error("Cannot update license: License ID not found");
+        return;
       }
 
-      // Call updateLicense from the purchase order store
-      await updateLicense(poId, licenseIndex, { // Await if it returns a promise
-        // Assuming updateLicense handles status, dates, serverId based on ledger logic or API response
-        // Pass only necessary info if updateLicense triggers backend logic
-        serverId: serverId, // Pass serverId for association
-        // status: "Activated", // Status might be set by backend/store logic
-        // activationDate: now,
-        // expirationDate: expirationDate,
-      });
+      // Call updateLicense with all required parameters
+      await updateLicense(
+        license.id,
+        poId,
+        {
+          status: "Activation Requested",
+          latestServerName: customerServers.find(s => s.id.toString() === serverId)?.name
+        },
+        2, // Assuming 2 is the action type ID for activation request
+        "License activation requested" // Optional comment
+      );
 
       // Mark license as activated locally for UI feedback
       setActivatedLicenses((prev) => ({
@@ -219,6 +232,29 @@ export default function CustomerPortal() {
     // Check the filtered purchase orders
     return customerPurchaseOrders.some((po) => po.licenses?.some((license) => license.status === "Activated"));
   }
+
+  // --- Add save changes handler ---
+  const handleSaveChanges = async () => {
+    if (!hasUnsavedChanges()) return;
+
+    const success = await saveChanges();
+    if (success) {
+      toast({
+        title: "Changes saved",
+        description: "All license changes have been saved successfully.",
+      });
+      // Optionally refresh data
+      if (customer?.id) {
+        fetchPurchaseOrdersByCustomerId(customer.id);
+      }
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error saving changes",
+        description: "There was a problem saving your changes. Please try again.",
+      });
+    }
+  };
 
   // --- Render Logic ---
 
@@ -284,9 +320,10 @@ export default function CustomerPortal() {
                     <TableHeader className="bg-brand-purple/5">
                       {/* ... TableHead ... */}
                     </TableHeader>
-                    <TableBody>{customerPurchaseOrders.flatMap((po) =>
-                        po.licenses?.map((license: any, licenseIndex: number) => ( // Add type safety for license if possible
-                          <React.Fragment key={`${po.id}-${license.id || licenseIndex}`}> {/* Use license.id if available, fallback to index */}
+                    <TableBody>
+                      {customerPurchaseOrders.flatMap((po: PurchaseOrder) =>
+                        po.licenses?.map((license, licenseIndex) => (
+                          <React.Fragment key={`${po.id}-${license.id || licenseIndex}`}>
                             <TableRow className="hover:bg-brand-purple/5">
                               {/* Use license.type?.name */}
                               <TableCell>{license.type?.name ?? 'Unknown Type'}</TableCell>
@@ -419,6 +456,25 @@ export default function CustomerPortal() {
             onClose={() => setLicenseDeactivationModal(false)}
             customerId={customer.id || ""} // Pass customer ID
           />
+
+          {/* Add Save Changes button when there are pending changes */}
+          {hasUnsavedChanges() && (
+            <div className="fixed bottom-4 right-4 flex gap-2">
+              <Button
+                variant="outline"
+                onClick={discardChanges}
+                className="bg-red-50 hover:bg-red-100"
+              >
+                Discard Changes
+              </Button>
+              <Button
+                onClick={handleSaveChanges}
+                className="bg-brand-purple hover:bg-brand-purple/90"
+              >
+                Save Changes
+              </Button>
+            </div>
+          )}
         </>
       ) : (
         // No customer selected view

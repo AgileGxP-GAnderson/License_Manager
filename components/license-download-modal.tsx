@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { useStore } from "@/lib/store"
-import type { Server } from "@/lib/types"
+import { useServerStore } from "@/lib/stores/serverStore"
+import { usePurchaseOrderStore } from "@/lib/stores/purchaseOrderStore"
+import type { License } from "@/lib/types"
 
 interface LicenseDownloadModalProps {
   isOpen: boolean
@@ -14,32 +15,39 @@ interface LicenseDownloadModalProps {
   customerId: string
 }
 
-export default function LicenseDownloadModal({ isOpen, onClose, customerId }: LicenseDownloadModalProps) {
-  const { getServersByCustomerId, getPurchaseOrdersByCustomerId } = useStore()
-  const servers = getServersByCustomerId(customerId)
+export default function LicenseDownloadModal({
+  isOpen,
+  onClose,
+  customerId
+}: LicenseDownloadModalProps) {
+  const { servers, isLoading: isLoadingServers } = useServerStore()
+  const { getPurchaseOrdersByCustomerId } = usePurchaseOrderStore()
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null)
   const [isDownloading, setIsDownloading] = useState(false)
+
+  const customerServers = servers.filter(server => 
+    String(server.customerId) === String(customerId)
+  )
 
   const handleDownload = () => {
     if (!selectedServerId) return
 
     setIsDownloading(true)
     try {
-      // In a real application, this would generate and download a license file
-      // For this prototype, we'll simulate the download
       const purchaseOrders = getPurchaseOrdersByCustomerId(customerId)
 
       // Find all activated licenses for the selected server
-      const activatedLicenses = purchaseOrders.flatMap((po) =>
-        po.licenses
-          .filter((license) => license.status === "Activated" && license.serverId === selectedServerId)
-          .map((license) => ({
-            poNumber: po.poNumber,
-            licenseType: license.licenseType,
-            activationDate: license.activationDate,
-            expirationDate: license.expirationDate,
-            duration: license.duration,
-          })),
+      const activatedLicenses = purchaseOrders.flatMap(po =>
+        po.licenses.filter(license => 
+          license.status === "Activated" && 
+          String(license.serverId) === selectedServerId
+        ).map(license => ({
+          poNumber: po.poName,
+          licenseType: license.type?.name,
+          activationDate: license.activationDate,
+          expirationDate: license.expirationDate,
+          duration: license.totalDuration,
+        }))
       )
 
       // Create a JSON blob with the license data
@@ -49,7 +57,9 @@ export default function LicenseDownloadModal({ isOpen, onClose, customerId }: Li
         generatedAt: new Date().toISOString(),
       }
 
-      const blob = new Blob([JSON.stringify(licenseData, null, 2)], { type: "application/json" })
+      const blob = new Blob([JSON.stringify(licenseData, null, 2)], { 
+        type: "application/json" 
+      })
       const url = URL.createObjectURL(blob)
 
       // Create a temporary link and trigger the download
@@ -84,7 +94,11 @@ export default function LicenseDownloadModal({ isOpen, onClose, customerId }: Li
         </DialogHeader>
 
         <div className="flex-1 py-4 overflow-auto">
-          {servers.length === 0 ? (
+          {isLoadingServers ? (
+            <div className="py-6 text-center">
+              <p className="text-muted-foreground">Loading servers...</p>
+            </div>
+          ) : customerServers.length === 0 ? (
             <div className="py-6 text-center">
               <p className="text-muted-foreground">No servers registered yet.</p>
               <p className="text-sm mt-2">Please register a server first.</p>
@@ -92,32 +106,37 @@ export default function LicenseDownloadModal({ isOpen, onClose, customerId }: Li
           ) : (
             <>
               <p className="text-sm mb-3">Select a server to download licenses for:</p>
-              <RadioGroup value={selectedServerId || ""} onValueChange={setSelectedServerId}>
-                <div className="space-y-3">
-                  {servers.map((server: Server) => (
-                    <div
-                      key={server.id}
-                      className="flex items-center space-x-2 border p-3 rounded-md hover:bg-muted/50"
-                    >
-                      <RadioGroupItem value={server.id} id={`download-${server.id}`} />
-                      <Label htmlFor={`download-${server.id}`} className="flex-1 cursor-pointer">
-                        <div className="font-medium">{server.name}</div>
-                        <div className="text-xs text-muted-foreground truncate">{server.fingerprint}</div>
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+              <RadioGroup
+                value={selectedServerId || ""}
+                onValueChange={setSelectedServerId}
+                className="space-y-2"
+              >
+                {customerServers.map((server) => (
+                  <div
+                    key={server.id}
+                    className="flex items-center space-x-2 p-2 rounded hover:bg-brand-purple/5"
+                  >
+                    <RadioGroupItem value={server.id.toString()} id={`server-${server.id}`} />
+                    <Label htmlFor={`server-${server.id}`} className="flex-1 cursor-pointer">
+                      {server.name}
+                    </Label>
+                  </div>
+                ))}
               </RadioGroup>
             </>
           )}
         </div>
 
-        <div className="border-t mt-6 pt-4 flex justify-end gap-2 bg-background sticky bottom-0 z-10">
-          <Button type="button" variant="outline" onClick={onClose}>
+        <div className="flex justify-end space-x-2 pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleDownload} disabled={isDownloading || !selectedServerId || servers.length === 0}>
-            Download License File
+          <Button
+            onClick={handleDownload}
+            disabled={!selectedServerId || isDownloading || isLoadingServers}
+            className="bg-brand-purple hover:bg-brand-purple/90"
+          >
+            {isDownloading ? "Downloading..." : "Download"}
           </Button>
         </div>
       </DialogContent>
