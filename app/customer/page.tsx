@@ -52,7 +52,6 @@ export default function CustomerPortal() {
     isLoadingServers,     // Loading state for servers
     serverError,          // Error state for servers
     fetchServersByCustomerId, // Action to fetch servers
-    getServersByCustomerId,   // Selector to filter servers (if needed, or filter manually)
     getServerById,          // Selector to get a specific server
     createServer,              // Action to add a server
   } = useServerStore();
