@@ -412,9 +412,9 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
       <Dialog open={isAuditModalOpen} onOpenChange={setIsAuditModalOpen}>
         <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-4xl">
           <DialogHeader>
-            <DialogTitle>License Audit Trail: {selectedLicenseForAudit?.uniqueId}</DialogTitle>
+            <DialogTitle>License history: {selectedLicenseForAudit?.externalName}</DialogTitle>
             <DialogDescription>
-              Showing history for license {selectedLicenseForAudit?.externalName || selectedLicenseForAudit?.uniqueId}.
+              Showing history for license {selectedLicenseForAudit?.externalName}.
               {auditError && <p className="text-red-500 mt-2">Error: {auditError}</p>} {/* Display audit error from store */}
             </DialogDescription>
           </DialogHeader>
@@ -429,18 +429,16 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                     <TableHead>Status</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Server</TableHead>
-                    <TableHead>Comment</TableHead>
                     <TableHead>Updated By</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentLicenseAudits.map((audit) => ( // Use currentLicenseAudits from store
                     <TableRow key={audit.id}>
-                      <TableCell>{formatDate(audit.createdAt)}</TableCell>
+                      <TableCell>{format(new Date(audit.createdAt), 'PPpp')}</TableCell> {/* Format as datetime */}
                       <TableCell>{audit.statusName}</TableCell>
                       <TableCell>{audit.typeName}</TableCell>
                       <TableCell>{audit.serverName}</TableCell>
-                      <TableCell>{audit.comment || '-'}</TableCell>
                       <TableCell>{audit.updatedBy || 'System'}</TableCell>
                     </TableRow>
                   ))}
