@@ -27,6 +27,8 @@ import PurchaseOrder from './purchaseOrder'; // Import PurchaseOrder for Belongs
 import LicenseAudit from './licenseAudit'; // Import LicenseAudit model
 // import Server from './server'; // Removed import, association handled in db.ts
 
+let models: any; // Declare models at the module scope
+
 // Interface for License attributes
 interface LicenseAttributes {
   id: number;
@@ -145,9 +147,26 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
         tableName: 'Licenses',
         timestamps: true,
         hooks: {
+          afterCreate: async (instance: License, options: any) => { // Added afterCreate hook
+            try {
+              await sequelize.models.LicenseAudit.create({
+                licenseIdRef: instance.id,
+                uniqueId: instance.uniqueId,
+                externalName: instance.externalName,
+                licenseStatusId: instance.licenseStatusId,
+                typeId: instance.typeId,
+                comment: instance.comment,
+                serverId: instance.serverId,
+                updatedBy: instance.updatedBy, // This might be null on creation, consider how to handle
+              }, { transaction: options.transaction });
+            } catch (error) {
+              console.error('Failed to create LicenseAudit record on create:', error);
+              throw error; // Re-throw the error to ensure transaction rollback
+            }
+          },
           afterUpdate: async (instance: License, options: InstanceUpdateOptions) => {
             try {
-              await LicenseAudit.create({
+              await sequelize.models.LicenseAudit.create({
                 licenseIdRef: instance.id,
                 uniqueId: instance.uniqueId,
                 externalName: instance.externalName,
@@ -158,7 +177,8 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
                 updatedBy: instance.updatedBy,
               }, { transaction: options.transaction });
             } catch (error) {
-              console.error('Failed to create LicenseAudit record:', error);
+              console.error('Failed to create LicenseAudit record on update:', error);
+              throw error; // Re-throw the error to ensure transaction rollback
             }
           }
         }
@@ -166,7 +186,8 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
   }
 
   // Define static associate method
-  public static associate(models: any) {
+  public static associate(models_param: any) { // Renamed models to models_param to avoid conflict
+    models = models_param; // Assign to module-level models variable
     License.belongsTo(models.LicenseTypeLookup, { foreignKey: 'typeId', as: 'type' });
     License.belongsTo(models.LicenseStatusLookup, { foreignKey: 'licenseStatusId', as: 'licenseStatus' }); // Added association
     // License.belongsTo(models.Server, { foreignKey: 'serverId', as: 'server' }); // Removed, association handled in db.ts
