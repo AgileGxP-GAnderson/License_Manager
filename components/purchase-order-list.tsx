@@ -307,12 +307,12 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                               <Badge
                                 variant={
                                   license.status === "Activated" ? "default" :
-                                  license.status === "Available" ? "secondary" : // Changed from "Activation Requested"
-                                  license.status === "Deactivated" ? "outline" : // Changed from "Expired"
+                                  license.status === "Available" ? "secondary" :
+                                  license.status === "Deactivated" ? "outline" :
                                   "secondary"
                                 }
                               >
-                                {license.status || 'N/A'} // Simplified to use the status directly
+                                {license.status || 'N/A'}
                               </Badge>
                             </TableCell>
                             <TableCell>{getDurationText(license.totalDuration)}</TableCell>

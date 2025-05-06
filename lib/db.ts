@@ -96,6 +96,7 @@ function initializeDb(): Db {
   // License associations
   // License.hasMany(LicenseLedger, { foreignKey: 'licenseId', as: 'ledgerEntries' }); // Removed
   License.belongsTo(LicenseTypeLookup, { foreignKey: 'typeId', as: 'type' });
+  License.belongsTo(LicenseStatusLookup, { foreignKey: 'licenseStatusId', as: 'licenseStatus' }); // Ensure this is present
   License.belongsTo(Server, { foreignKey: 'serverId', as: 'server' }); // Added association
   License.belongsToMany(PurchaseOrder, {
     through: POLicenseJoin,
@@ -106,6 +107,9 @@ function initializeDb(): Db {
 
   // LicenseTypeLookup associations
   LicenseTypeLookup.hasMany(License, { foreignKey: 'typeId', as: 'licensesOfType' });
+
+  // LicenseStatusLookup associations (if any, e.g., hasMany Licenses)
+  LicenseStatusLookup.hasMany(License, { foreignKey: 'licenseStatusId', as: 'licensesWithStatus' });
 
   // Server associations
   Server.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' }); // Added association
@@ -123,11 +127,6 @@ function initializeDb(): Db {
 
   // User associations
   User.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
-
-  // LicenseLedger associations - Removed
-  // LicenseLedger.belongsTo(License, { foreignKey: 'licenseId', as: 'license' });
-  // LicenseLedger.belongsTo(Server, { foreignKey: 'serverId', as: 'server' });
-  // LicenseLedger.belongsTo(LicenseActionLookup, { foreignKey: 'licenseActionId', as: 'licenseAction' });
 
   // POLicenseJoin associations
   POLicenseJoin.belongsTo(PurchaseOrder, { foreignKey: 'poId', as: 'purchaseOrder' });

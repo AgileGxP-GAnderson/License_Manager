@@ -2,7 +2,7 @@ import { DataTypes, Model, Optional, Sequelize } from 'sequelize';
 
 interface LicenseStatusLookupAttributes {
   id: number;
-  status: string;
+  name: string; // Changed from status to name
   description: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -13,7 +13,7 @@ export interface LicenseStatusLookupOutput extends Required<LicenseStatusLookupA
 
 class LicenseStatusLookup extends Model<LicenseStatusLookupAttributes, LicenseStatusLookupInput> implements LicenseStatusLookupAttributes {
   public id!: number;
-  public status!: string;
+  public name!: string; // Changed from status to name
   public description!: string;
 
   public readonly createdAt!: Date;
@@ -26,7 +26,7 @@ class LicenseStatusLookup extends Model<LicenseStatusLookupAttributes, LicenseSt
         autoIncrement: true,
         primaryKey: true,
       },
-      status: {
+      name: { // Changed from status to name
         type: DataTypes.STRING,
         allowNull: false,
       },

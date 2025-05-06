@@ -57,9 +57,8 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     setFormError(null);
 
     const poData: PurchaseOrderInput = {
-      ...values,
+      ...values, // poName and purchaseDate (as string YYYY-MM-DD) are here
       customerId: customerId, // Ensure customerId is included
-      purchaseDate: new Date(values.purchaseDate).toISOString(), // Convert back to ISO string
       isClosed: values.isClosed ?? false, // Ensure isClosed is provided, defaulting to false for new POs
     };
 

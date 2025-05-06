@@ -168,6 +168,7 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
   // Define static associate method
   public static associate(models: any) {
     License.belongsTo(models.LicenseTypeLookup, { foreignKey: 'typeId', as: 'type' });
+    License.belongsTo(models.LicenseStatusLookup, { foreignKey: 'licenseStatusId', as: 'licenseStatus' }); // Added association
     // License.belongsTo(models.Server, { foreignKey: 'serverId', as: 'server' }); // Removed, association handled in db.ts
     License.belongsToMany(models.PurchaseOrder, {
       through: models.POLicenseJoin, // Use models.POLicenseJoin

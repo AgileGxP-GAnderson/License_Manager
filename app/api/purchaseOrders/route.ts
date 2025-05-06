@@ -7,6 +7,7 @@ import PurchaseOrder from '@/lib/models/purchaseOrder';
 import { WhereOptions, Sequelize } from 'sequelize';
 import Server from '@/lib/models/server';
 import LicenseTypeLookup from '@/lib/models/licenseTypeLookup'; // Import LicenseTypeLookup
+import LicenseStatusLookup from '@/lib/models/licenseStatusLookup'; // +++ Import LicenseStatusLookup
 import POLicenseJoin from '@/lib/models/poLicenseJoin'; // Import the join model
 
 // Handler for GET /api/purchaseOrders
@@ -73,6 +74,12 @@ export async function GET(request: NextRequest) {
               required: false,
             },
             {
+              model: LicenseStatusLookup, // +++ Include LicenseStatusLookup
+              as: 'licenseStatus',       // +++ Alias for the association
+              attributes: ['name'],      // +++ Fetch 'name' again
+              required: false,
+            },
+            {
               model: Server,
               as: 'server',
               attributes: ['id', 'name'],
@@ -97,26 +104,12 @@ export async function GET(request: NextRequest) {
             // Get the latest ledger entry (if it exists)
             const latestLedgerEntry = license.ledgerEntries?.[0];
 
-            // Determine status based on licenseStatusId
-            let status = 'Unknown';
-            switch (license.licenseStatusId) {
-              case 1:
-                status = 'Available';
-                break;
-              case 2:
-                status = 'Activated';
-                break;
-              case 3:
-                status = 'Deactivated';
-                break;
-            }
-
             return {
                 ...license,
                 totalDuration: duration, // Add duration directly
                 // Add derived/flattened fields for convenience
                 latestServerName: latestLedgerEntry?.server?.name ?? null,
-                status: status, // Use derived status
+                status: license.licenseStatus?.name ?? 'Unknown', // +++ Use 'name' from joined table again
                 activationDate: latestLedgerEntry?.activityDate ?? null, // Use latest activity date
                 expirationDate: latestLedgerEntry?.expirationDate ?? null, // Use ledger expiration date
 
