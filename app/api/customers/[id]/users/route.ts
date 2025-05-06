@@ -9,7 +9,6 @@ interface RouteParams {
   };
 }
 
-// Handler for GET /api/customers/:id/users
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const db = getDbInstance();
   try {
@@ -20,19 +19,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return new NextResponse('Invalid customer ID format', { status: 400 });
     }
 
-    // Optional but recommended: Check if the customer actually exists
     const customer = await db.Customer.findByPk(customerId);
     if (!customer) {
       return new NextResponse(`Customer with ID ${customerIdStr} not found`, { status: 404 });
     }
 
-    // Find all users where the customerId field matches the ID from the route
     const users = await db.User.findAll({
       where: { customerId: customerId }, // Filter by the customerId foreign key
       attributes: { exclude: ['password'] } // Exclude password directly in the query
     });
 
-    // The result is already an array of users (or an empty array if none found)
     return NextResponse.json(users);
 
   } catch (error) {
@@ -40,6 +36,3 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
-
-// You could add a POST handler here to create a user specifically for this customer
-// export async function POST(request: NextRequest, { params }: RouteParams) { ... }

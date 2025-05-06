@@ -6,16 +6,13 @@ interface PurchaseOrderStoreState {
   isLoadingPurchaseOrders: boolean;
   purchaseOrderError: string | null;
 
-  // Core PO operations
   fetchPurchaseOrdersByCustomerId: (customerId: string) => Promise<void>;
   addPurchaseOrder: (poData: PurchaseOrderInput) => Promise<PurchaseOrder | null>;
   updatePurchaseOrder: (poId: string, poData: Partial<PurchaseOrderInput>) => Promise<PurchaseOrder | null>;
   deletePurchaseOrder: (poId: string) => Promise<boolean>;
-  
-  // License operations within POs
+
   addLicenseToPurchaseOrder: (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration' | 'externalName'>) => Promise<boolean>;
-  
-  // Helper functions
+
   setPurchaseOrders: (purchaseOrders: PurchaseOrder[]) => void;
   clearPurchaseOrders: () => void;
   isPONameUnique: (poNumber: string) => boolean;
@@ -32,7 +29,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
   (set, get) => ({
     ...initialState,
 
-    setPurchaseOrders: (purchaseOrders) => set({ 
+    setPurchaseOrders: (purchaseOrders) => set({
       purchaseOrders: purchaseOrders.map(po => ({
         ...po,
         purchaseDate: po.purchaseDate ? new Date(po.purchaseDate) : new Date(),
@@ -53,7 +50,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
         set({ purchaseOrders: [], isLoadingPurchaseOrders: false, purchaseOrderError: null });
         return;
       }
-      
+
       set({ isLoadingPurchaseOrders: true, purchaseOrderError: null });
       try {
         const response = await fetch(`/api/purchaseOrders?customerId=${customerId}`);
@@ -61,7 +58,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
           const errorData = await response.json().catch(() => ({ message: `Failed to fetch purchase orders (${response.status})` }));
           throw new Error(errorData.message || `Failed to fetch purchase orders (${response.status})`);
         }
-        
+
         const data = await response.json();
         const processedData = data.map(po => ({
           ...po,
@@ -76,7 +73,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
         set({ purchaseOrders: processedData, isLoadingPurchaseOrders: false });
       } catch (error: any) {
         console.error("Error fetching purchase orders:", error);
-        set({ 
+        set({
           purchaseOrderError: error.message || 'Failed to fetch purchase orders',
           isLoadingPurchaseOrders: false,
           purchaseOrders: []
@@ -95,8 +92,8 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
       try {
         const apiPayload = {
           ...poData,
-          purchaseDate: typeof poData.purchaseDate === 'string' 
-            ? poData.purchaseDate 
+          purchaseDate: typeof poData.purchaseDate === 'string'
+            ? poData.purchaseDate
             : poData.purchaseDate.toISOString()
         };
 
@@ -130,9 +127,9 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
         return processedPO;
       } catch (error: any) {
         console.error("Error adding purchase order:", error);
-        set({ 
+        set({
           purchaseOrderError: error.message || 'Failed to add purchase order',
-          isLoadingPurchaseOrders: false 
+          isLoadingPurchaseOrders: false
         });
         return null;
       }
@@ -157,8 +154,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
         }
 
         const newLicense = await response.json();
-        
-        // Update local state
+
         set(state => ({
           purchaseOrders: state.purchaseOrders.map(po => {
             if (po.id === licenseData.poId) {
@@ -179,7 +175,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
         return true;
       } catch (error: any) {
         console.error("Error adding license to purchase order:", error);
-        set({ 
+        set({
           purchaseOrderError: error.message || 'Failed to add license to purchase order',
           isLoadingPurchaseOrders: false,
         });
@@ -231,7 +227,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
         return processedPO;
       } catch (error: any) {
         console.error("Error updating purchase order:", error);
-        set({ 
+        set({
           purchaseOrderError: error.message || 'Failed to update purchase order',
           isLoadingPurchaseOrders: false
         });
@@ -259,7 +255,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
         return true;
       } catch (error: any) {
         console.error("Error deleting purchase order:", error);
-        set({ 
+        set({
           purchaseOrderError: error.message || 'Failed to delete purchase order',
           isLoadingPurchaseOrders: false
         });
@@ -274,7 +270,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
 
     getPurchaseOrdersByCustomerId: (customerId) => {
       const { purchaseOrders } = get();
-      return purchaseOrders.filter(po => 
+      return purchaseOrders.filter(po =>
         String(po.customerId) === String(customerId)
       );
     },

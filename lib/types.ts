@@ -29,12 +29,10 @@ export interface Server {
   customerId: number;
   name: string;
   description?: string | null;
-  // Fingerprint might be string (base64) in frontend/API, Buffer in backend
   fingerprint: string | Buffer;
   isActive: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;
-  // Add other related fields if needed (e.g., from associations)
 }
 
 export interface License {
@@ -45,27 +43,18 @@ export interface License {
   createdAt?: Date | string;
   updatedAt?: Date | string;
 
-  // --- From Included Associations / Processing ---
   type?: { // From LicenseTypeLookup
     id: number;
     name: string;
   };
   totalDuration?: number | null; // From POLicenseJoin
 
-  // --- Flattened from Latest Ledger Entry ---
   latestServerName?: string | null;
   lastActionName?: string | null; // Name of the latest action
   status?: string | null; // Derived status ('Activated', 'Available', etc.)
   activationDate?: Date | string | null; // Date of the latest activity
   expirationDate?: Date | string | null; // Expiration from the latest ledger entry
 
-  // --- Original nested structure (alternative if not flattening in API) ---
-  // ledgerEntries?: Array<{
-  //   activityDate: Date | string;
-  //   expirationDate?: Date | string | null;
-  //   server?: { id: number; name: string } | null;
-  //   licenseAction?: { id: number; name: string } | null;
-  // }>;
 }
 
 export interface PurchaseOrder {
@@ -83,15 +72,12 @@ export interface PurchaseOrder {
     updatedAt?: Date | string;
 }
 
-// --- User Store State Interface ---
-// Adjust input types (Omit/Partial) based on the actual User model and API needs
 export type CreateUserInput = Omit<User, 'id'>;
 export type UpdateUserInput = Partial<User>;
 
 export type PurchaseOrderInput = Omit<PurchaseOrder, 'id'>;
 export type UpdatePurchaseOrderInput = Partial<PurchaseOrder>;
 
-// --- Existing Combined StoreState (Kept as requested) ---
 export interface StoreState {
   customers: Customer[]
   purchaseOrders: PurchaseOrder[]
@@ -99,10 +85,8 @@ export interface StoreState {
   users: User[]
   currentCustomerId: string | null
 
-  // Derived state
   currentCustomer: Customer | null
 
-  // Actions
   addCustomer: (customer: Omit<Customer, "id">) => Promise<Customer>; // Assuming returns ID now
   updateCustomer: (id: string, customer: Partial<Customer>) => Promise<Customer>; // Assuming async
   setCurrentCustomer: (id: string | null) => void
@@ -113,35 +97,28 @@ export interface StoreState {
   getPurchaseOrdersByCustomerId: (customerId: string) => PurchaseOrder[]
   fetchPurchaseOrdersForCustomer: (customerId: string) => Promise<void>;
 
-  // License actions
   updateLicense: (poId: string, licenseIndex: number, licenseData: Partial<License>) => void; // Changed Promise<License> to void
   requestLicenseActivation: (poId: string, licenseIndex: number, serverId: string) => void; // Assuming local update only for now
   activateLicense: (poId: string, licenseIndex: number) => void; // Assuming local update only for now
   deactivateLicense: (poId: string, licenseIndex: number) => void; // Assuming local update only for now
   isPONumberUnique: (poNumber: string) => boolean
 
-  // Server actions
   addServer: (server: Omit<Server, "id">) => Promise<Server>; // Assuming async, returns Server
   getServersByCustomerId: (customerId: string) => Server[]
   getServerById: (id: string) => Server | null; // Changed undefined to null for consistency
 
-  // User actions
   addUser: (user: Omit<User, "id">) => Promise<User>; // Assuming async, returns User
   updateUser: (id: string, user: Partial<User>) => Promise<User>; // Assuming async
-  // --- Selector to get users for a customer ---
   getUsersByCustomerId: (customerId: string) => User[];
-  // --- Action to fetch users for a customer ---
   fetchUsersForCustomer: (customerId: string) => Promise<void>; // Renamed for clarity
 
   isUsernameUnique: (username: string) => boolean
 }
 
-// --- Server Store State Interface ---
 export interface ServerState {
   servers: Server[];
   loading: boolean;
   error: string | null;
-  // Ensure customerId type matches usage (string | number)
   createServer: (customerId: string | number, serverData: Omit<Server, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Server | null>;
   fetchServersByCustomerId: (customerId: string | number) => Promise<void>;
   getServerById: (id: string | number) => Server | undefined;
@@ -159,13 +136,11 @@ export interface LicenseAudit {
   serverId?: number | null;
   updatedBy?: string | null; // User or process that triggered the change
   createdAt: Date | string; // Timestamp of the audit record
-  // Optional: Add fields for human-readable names if resolved by the backend
   statusName?: string;
   typeName?: string;
   serverName?: string;
 }
 
-// Input type for creating a license, used in AddLicenseForm
 export interface LicenseInput {
     poId: string; // Purchase Order ID
     typeId: number;

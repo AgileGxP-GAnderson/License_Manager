@@ -10,7 +10,6 @@ import LicenseTypeLookup from '@/lib/models/licenseTypeLookup'; // Import Licens
 import LicenseStatusLookup from '@/lib/models/licenseStatusLookup'; // +++ Import LicenseStatusLookup
 import POLicenseJoin from '@/lib/models/poLicenseJoin'; // Import the join model
 
-// Handler for GET /api/purchaseOrders
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const customerIdStr = searchParams.get('customerId');
@@ -31,7 +30,6 @@ export async function GET(request: NextRequest) {
     const dbInstance = getDbInstance();
     const sequelize = dbInstance.sequelize;
 
-    // Fetch Purchase Orders including Licenses and their latest Ledger entry
     const purchaseOrdersData = await dbInstance.PurchaseOrder.findAll({
       where: whereClause,
       attributes: [
@@ -56,9 +54,6 @@ export async function GET(request: NextRequest) {
             'externalName',
             'typeId',
             'licenseStatusId', // +++ Added licenseStatusId
-            // Calculate total duration using the join table alias
-            // Note: This SUM might be complex with nested includes, consider calculating on frontend if issues arise
-            // Or fetch duration directly from the join table attributes below
           ],
           through: {
             model: POLicenseJoin, // Specify the join model
@@ -89,31 +84,23 @@ export async function GET(request: NextRequest) {
         }
       ],
       order: [['purchaseDate', 'DESC'], ['poName', 'ASC']], // Example ordering
-      // No need for manual grouping if not aggregating directly in the main query
-      // No need for raw: true, process Sequelize instances
     });
 
-    // --- Process results to extract duration and flatten slightly for easier UI use ---
-    // Sequelize returns nested structure, we can adjust it slightly here
     const processedPOs = purchaseOrdersData.map(poInstance => {
         const poJson = poInstance.toJSON(); // Convert to plain object
 
         poJson.licenses = poJson.licenses?.map((license: any) => {
-            // Extract duration from the join table data
             const duration = license.poLicenseJoin?.duration;
-            // Get the latest ledger entry (if it exists)
             const latestLedgerEntry = license.ledgerEntries?.[0];
 
             return {
                 ...license,
                 totalDuration: duration, // Add duration directly
-                // Add derived/flattened fields for convenience
                 latestServerName: latestLedgerEntry?.server?.name ?? null,
                 status: license.licenseStatus?.name ?? 'Unknown', // +++ Use 'name' from joined table again
                 activationDate: latestLedgerEntry?.activityDate ?? null, // Use latest activity date
                 expirationDate: latestLedgerEntry?.expirationDate ?? null, // Use ledger expiration date
 
-                // Optionally remove intermediate objects if not needed
                 poLicenseJoin: undefined,
                 ledgerEntries: undefined, // Remove original nested ledger entry if flattened fields are used
             };
@@ -132,39 +119,32 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Handler for POST /api/purchaseOrders (Create a new purchase order)
 export async function POST(request: NextRequest) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
     const rawBody = await request.json();
 
-    // Ensure the body conforms to PurchaseOrderInput, especially for required fields and their types
     const processedBody: PurchaseOrderInput = {
       ...rawBody, // Spread rawBody to include any other fields passed by client
       poName: rawBody.poName,
       purchaseDate: new Date(rawBody.purchaseDate), // Convert string to Date object
       customerId: Number(rawBody.customerId),       // Convert string/any to number
-      // Default isClosed to false if null or undefined, otherwise use the boolean value from request
       isClosed: (rawBody.isClosed === undefined || rawBody.isClosed === null) ? false : Boolean(rawBody.isClosed),
     };
 
-    // Basic validation - adjust field names as per your model
     if (!processedBody.poName || !processedBody.purchaseDate || isNaN(processedBody.customerId)) {
-      // Check if purchaseDate became an invalid date
       if (isNaN(processedBody.purchaseDate.getTime())) {
         return new NextResponse('Invalid or missing purchaseDate', { status: 400 });
       }
       return new NextResponse('Missing required fields (e.g., poName, purchaseDate, customerId)', { status: 400 });
     }
 
-    // Validate customerId existence
     const customerExists = await db.Customer.findByPk(processedBody.customerId);
     if (!customerExists) {
       return new NextResponse(`Customer with ID ${processedBody.customerId} not found.`, { status: 400 });
     }
 
     const newPurchaseOrder = await db.PurchaseOrder.create(processedBody);
-    // Fetch again to include customer data in response
     const result = await db.PurchaseOrder.findByPk(newPurchaseOrder.id, {
       include: [{ model: Customer, as: 'customer' }]
     });
@@ -172,9 +152,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('[API_PURCHASE_ORDERS_POST]', error);
-    // Add specific error handling (e.g., unique constraints) if needed
     if (error.name === 'SequelizeUniqueConstraintError') {
-      // Adjust message based on what constraint failed (e.g., purchaseOrderNumber)
       return new NextResponse('A purchase order with this number might already exist.', { status: 409 }); // 409 Conflict
     }
     return new NextResponse('Internal Server Error', { status: 500 });

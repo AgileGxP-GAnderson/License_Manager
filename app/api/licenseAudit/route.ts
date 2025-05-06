@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbInstance } from '@/lib/db';
-// LicenseAudit type will be used from db.LicenseAudit model directly or via db instance.
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);

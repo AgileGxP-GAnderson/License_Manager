@@ -9,7 +9,6 @@ interface RouteParams {
   };
 }
 
-// Handler for GET /api/purchaseOrders/:id (Get purchase order by ID)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
@@ -36,7 +35,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// Handler for PUT /api/purchaseOrders/:id (Update purchase order)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
@@ -54,11 +52,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
 
         const body: Partial<PurchaseOrderInput> = await request.json();
-        // Prevent updating primary key or timestamps directly
         const { id: bodyId, createdAt, updatedAt, customerId: bodyCustomerId, ...updateDataInput } = body;
         const updateData: Partial<PurchaseOrderInput> = { ...updateDataInput }; // Clone
 
-        // Validate customerId if it's being updated
         if (body.customerId !== undefined && body.customerId !== purchaseOrder.customerId) {
              const customerExists = await db.Customer.findByPk(body.customerId);
              if (!customerExists) {
@@ -67,10 +63,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
              updateData.customerId = body.customerId; // Add it back if valid
         }
 
-        // Note: Handling updates to associated licenses would require additional logic here
 
         await purchaseOrder.update(updateData);
-        // Fetch again to include customer data in response
         const result = await db.PurchaseOrder.findByPk(poId, {
              include: [{ model: Customer, as: 'customer' }]
         });
@@ -78,12 +72,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     } catch (error: any) {
         console.error('[API_PURCHASE_ORDER_PUT]', error);
-        // Add specific error handling if needed
         return new NextResponse('Internal Server Error', { status: 500 });
     }
 }
 
-// Handler for DELETE /api/purchaseOrders/:id (Delete purchase order)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
@@ -100,15 +92,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             return new NextResponse('Purchase Order not found', { status: 404 });
         }
 
-        // Note: Consider implications of deleting a PO (e.g., associated licenses via join table).
-        // Foreign key constraints might prevent deletion or cause cascading deletes.
-        // You might need to manually delete related POLicenseJoin records first if constraints are restrictive.
         await purchaseOrder.destroy();
         return new NextResponse(null, { status: 204 }); // 204 No Content
 
     } catch (error: any) {
         console.error('[API_PURCHASE_ORDER_DELETE]', error);
-         // Add specific error handling for foreign key constraints if needed
          if (error.name === 'SequelizeForeignKeyConstraintError') {
              return new NextResponse('Cannot delete Purchase Order because it has associated data (e.g., licenses).', { status: 409 });
          }

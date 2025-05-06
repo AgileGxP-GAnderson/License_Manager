@@ -51,7 +51,6 @@ class LicenseTypeLookup extends Model<LicenseTypeLookupAttributes, LicenseTypeLo
     });
   }
 
-  // Define static associate method
   public static associate(models: any) {
     LicenseTypeLookup.hasMany(models.License, { foreignKey: 'typeId', as: 'licensesOfType' });
   }

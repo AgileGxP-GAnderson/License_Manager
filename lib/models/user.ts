@@ -1,7 +1,5 @@
 import { DataTypes, Model, Optional, BelongsToGetAssociationMixin, Sequelize } from 'sequelize'; // Import Sequelize type
-// No longer need to import db here for initialization
 
-// Interface for User attributes
 interface UserAttributes {
   id: number;
   customerId: number;
@@ -15,13 +13,10 @@ interface UserAttributes {
   updatedAt?: Date;
 }
 
-// Interface for User creation attributes
 export interface UserInput extends Optional<UserAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
 
-// Interface for User output attributes
 export interface UserOutput extends Required<UserAttributes> {}
 
-// Define the User model
 class User extends Model<UserAttributes, UserInput> implements UserAttributes {
   public id!: number;
   public customerId!: number;
@@ -32,15 +27,12 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
   public passwordEncrypted!: Buffer;
   public isActive!: boolean;
 
-  // Timestamps
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
-  // Associations
   public getCustomer!: BelongsToGetAssociationMixin<CustomerOutput>;
   public readonly customer?: CustomerOutput;
 
-  // Define static init method
   public static initialize(sequelize: Sequelize) {
       User.init({
         id: {
@@ -102,9 +94,7 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
       });
   }
 
-  // Define static associate method
   public static associate(models: any) {
-    // User belongs to a Customer
     User.belongsTo(models.Customer, {
       foreignKey: 'customerId',
       as: 'customer',

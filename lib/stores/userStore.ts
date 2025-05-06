@@ -107,7 +107,6 @@ export const useUserStore = create<UserState>((set) => ({
       } else if (typeof err === 'string') {
         extractedMessage = err; // Handle if error is a string
       }
-      // Refined console.error call
       console.error(`Error creating user: ${extractedMessage}`, errorDetails);
       set({ error: extractedMessage, loading: false });
     }
@@ -174,11 +173,9 @@ export const useUserStore = create<UserState>((set) => ({
     try {
       const updatedUsers: User[] = [];
       for (const user of users) {
-        // Ensure customerId is set for all users
         const userData = { ...user, customerId };
 
         if (!user.id) {
-          // Create new user
           const response = await fetch('/api/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -191,7 +188,6 @@ export const useUserStore = create<UserState>((set) => ({
           const newUser: User = await response.json();
           updatedUsers.push(newUser);
         } else {
-          // Update existing user
           const response = await fetch(`/api/users/${user.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -206,7 +202,6 @@ export const useUserStore = create<UserState>((set) => ({
         }
       }
 
-      // Update state with all created/updated users
       set((state) => {
         const newUsersMap = new Map(updatedUsers.map((u) => [u.id, u]));
         const updatedUserList = state.users

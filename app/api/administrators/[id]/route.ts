@@ -8,7 +8,6 @@ interface RouteParams {
   };
 }
 
-// Handler for GET /api/administrators/:id (Get administrator by ID)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
@@ -25,7 +24,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return new NextResponse('Administrator not found', { status: 404 });
     }
 
-    // Omit password from the response
     const { password, ...safeAdmin } = administrator.get({ plain: true });
     return NextResponse.json(safeAdmin);
 
@@ -35,7 +33,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// Handler for PUT /api/administrators/:id (Update administrator)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
@@ -53,11 +50,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
 
         const body: Partial<AdministratorInput> = await request.json();
-        // Prevent updating primary key or timestamps directly via body
         const { id: bodyId, createdAt, updatedAt, ...updateDataInput } = body;
         const updateData: Partial<AdministratorInput> = { ...updateDataInput }; // Clone
 
-        // Handle password update (assuming Base64 input)
         if (updateData.password !== undefined) {
              try {
                  if (typeof updateData.password !== 'string') {
@@ -73,7 +68,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
         await administrator.update(updateData);
 
-        // Omit password from response
         const { password, ...safeUpdatedAdmin } = administrator.get({ plain: true });
         return NextResponse.json(safeUpdatedAdmin);
 
@@ -86,7 +80,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 }
 
-// Handler for DELETE /api/administrators/:id (Delete administrator)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {

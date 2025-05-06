@@ -1,8 +1,6 @@
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize';
 import Customer, { CustomerOutput } from './customer'; // Import Customer for association
-// import License from './license'; // Removed import, association handled in db.ts
 
-// Interface for Server attributes
 interface ServerAttributes {
   id: number;
   customerId: number; // +++ Add customerId +++
@@ -14,14 +12,10 @@ interface ServerAttributes {
   updatedAt?: Date;
 }
 
-// Interface for Server creation attributes
-// +++ customerId is required for creation, remove from Optional +++
 export interface ServerInput extends Optional<ServerAttributes, 'id' | 'createdAt' | 'updatedAt' | 'description'> {}
 
-// Interface for Server output attributes
 export interface ServerOutput extends Required<ServerAttributes> {}
 
-// Define the Server model
 class Server extends Model<ServerAttributes, ServerInput> implements ServerAttributes {
   public id!: number;
   public customerId!: number; // +++ Add customerId property +++
@@ -30,15 +24,11 @@ class Server extends Model<ServerAttributes, ServerInput> implements ServerAttri
   public fingerprint!: Buffer;
   public isActive!: boolean;
 
-  // Timestamps
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
-  // Associations (will be defined later if needed)
   public readonly customer?: CustomerOutput;
-  // public readonly licenses?: License[]; // Keep for type safety, but association is in db.ts
 
-  // Define static init method
   public static initialize(sequelize: Sequelize) {
       Server.init({
         id: {
@@ -46,7 +36,6 @@ class Server extends Model<ServerAttributes, ServerInput> implements ServerAttri
           autoIncrement: true,
           primaryKey: true,
         },
-        // +++ Add customerId column definition +++
         customerId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -89,7 +78,6 @@ class Server extends Model<ServerAttributes, ServerInput> implements ServerAttri
         sequelize,
         tableName: 'Servers',
         timestamps: true,
-        // +++ Add indexes for uniqueness constraint +++
         indexes: [
             {
                 unique: true,
@@ -105,7 +93,6 @@ class Server extends Model<ServerAttributes, ServerInput> implements ServerAttri
       });
   }
 
-  // Define static associate method
   public static associate(models: any) {
     Server.belongsTo(models.Customer, { foreignKey: 'customerId', as: 'customer' });
     Server.hasMany(models.License, { foreignKey: 'serverId', as: 'licenses' });

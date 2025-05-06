@@ -11,7 +11,6 @@ interface RouteParams {
   };
 }
 
-// Handler for GET /api/licenseLedgers/:id (Get ledger entry by ID)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
@@ -42,7 +41,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// Handler for PUT /api/licenseLedgers/:id (Update ledger entry)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
@@ -60,11 +58,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
 
         const body: Partial<LicenseLedgerInput> = await request.json();
-        // Prevent updating primary key or timestamps directly
         const { id: bodyId, createdAt, updatedAt, licenseId: bodyLicenseId, serverId: bodyServerId, licenseActionId: bodyActionId, ...updateDataInput } = body;
         const updateData: Partial<LicenseLedgerInput> = { ...updateDataInput }; // Clone
 
-        // Validate foreign keys if they are being updated
         if (body.licenseId !== undefined && body.licenseId !== ledgerEntry.licenseId) {
              const licenseExists = await db.License.findByPk(body.licenseId);
              if (!licenseExists) return new NextResponse(`License with ID ${body.licenseId} not found.`, { status: 400 });
@@ -82,7 +78,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
 
         await ledgerEntry.update(updateData);
-        // Fetch again to include associated data in response
         const result = await db.LicenseLedger.findByPk(ledgerId, {
              include: [
                 { model: License, as: 'license' },
@@ -94,12 +89,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     } catch (error: any) {
         console.error('[API_LICENSE_LEDGER_PUT]', error);
-        // Add specific error handling if needed
         return new NextResponse('Internal Server Error', { status: 500 });
     }
 }
 
-// Handler for DELETE /api/licenseLedgers/:id (Delete ledger entry)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {

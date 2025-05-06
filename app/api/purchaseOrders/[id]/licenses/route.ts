@@ -4,14 +4,12 @@ import { getDbInstance } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { License as LicenseType } from '@/lib/types'; // Assuming this type is just for frontend, not DB model
 
-// Zod schema for the request body
 const licenseBodySchema = z.object({
     typeId: z.number().int(),
     duration: z.number().int(),
     externalName: z.string().optional(), // Make externalName optional
 });
 
-// Define the expected params structure
 interface RouteContext {
     params: { id: string };
 }
@@ -22,7 +20,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const transaction = await db.sequelize.transaction();
 
     try {
-        // --- Parse the purchaseOrderId string from the URL parameter ---
         const purchaseOrderId = parseInt(purchaseOrderIdStr, 10);
 
         if (isNaN(purchaseOrderId)) {
@@ -30,7 +27,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
             return NextResponse.json({ message: 'Invalid Purchase Order ID format' }, { status: 400 });
         }
 
-        // Validate request body
         const body = await request.json();
         const validation = licenseBodySchema.safeParse(body);
 
@@ -41,38 +37,30 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
         const { typeId, duration, externalName } = validation.data;
 
-        // Verify Purchase Order exists within the transaction
         const purchaseOrder = await db.PurchaseOrder.findByPk(purchaseOrderId, { transaction });
         if (!purchaseOrder) {
             await transaction.rollback();
             return NextResponse.json({ message: 'Purchase Order not found' }, { status: 404 });
         }
 
-        // Create the new License
         const newLicense = await db.License.create({
             uniqueId: uuidv4(), // Generate a unique ID for the license
             externalName: externalName || `License for PO ${purchaseOrder.poName}`, // Use provided externalName or default
             typeId: typeId,
             status: 'Available', // Initial status
-            // activationDate, expirationDate, serverId will be null initially
         }, { transaction });
 
-        // Associate License with Purchase Order using the join table
         await db.POLicenseJoin.create({
             poId: purchaseOrderId,
             licenseId: newLicense.id,
             duration: duration,
         }, { transaction });
 
-        // Commit the transaction
         await transaction.commit();
 
-        // Refetch the created license with its association data if needed, or just return the basic object
-        // For simplicity, returning the created object directly. Adjust if more details are needed.
         return NextResponse.json(newLicense, { status: 201 });
 
     } catch (error) {
-        // Rollback transaction in case of any error
         await transaction.rollback();
         console.error("Error creating license and ledger entry:", error);
         let errorMessage = 'Failed to create license.';

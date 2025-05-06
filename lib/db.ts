@@ -2,12 +2,9 @@ import { Sequelize, Dialect, DataTypes, Model } from 'sequelize'; // Import Mode
 import dotenv from 'dotenv';
 import { dialectModules } from './sequelize-dialects';
 
-// Import model CLASSES (keep these at top level for type usage)
 import Administrator from './models/administrator';
 import Customer from './models/customer';
 import License from './models/license';
-// import LicenseActionLookup from './models/licenseActionLookup'; // Removed
-// import LicenseLedger from './models/licenseLedger'; // Removed
 import LicenseStatusLookup from './models/licenseStatusLookup';
 import LicenseTypeLookup from './models/licenseTypeLookup';
 import POLicenseJoin from './models/poLicenseJoin';
@@ -16,10 +13,8 @@ import Server from './models/server';
 import User from './models/user';
 import LicenseAudit from './models/licenseAudit'; // Added import
 
-// Load environment variables from .env file
 dotenv.config({ path: '.env.local' });
 
-// --- Database Configuration ---
 const dbName = process.env.DB_NAME as string;
 const dbUser = process.env.DB_USER as string;
 const dbHost = process.env.DB_HOST;
@@ -28,16 +23,12 @@ const dbPort = process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432;
 const dbDialect = (process.env.DB_DIALECT || 'postgres') as Dialect;
 const dbSslMode = process.env.DB_SSL_MODE;
 
-// --- Define a type for the DB object ---
-// Adjust this based on the actual structure of your models if needed
 interface Db {
   sequelize: Sequelize;
   Sequelize: typeof Sequelize;
   Administrator: typeof Administrator;
   Customer: typeof Customer;
   License: typeof License;
-  // LicenseActionLookup: typeof LicenseActionLookup; // Removed
-  // LicenseLedger: typeof LicenseLedger; // Removed
   LicenseStatusLookup: typeof LicenseStatusLookup; // Added to interface
   LicenseTypeLookup: typeof LicenseTypeLookup;
   POLicenseJoin: typeof POLicenseJoin;
@@ -47,10 +38,8 @@ interface Db {
   LicenseAudit: typeof LicenseAudit; // Added to interface
 }
 
-// --- Cached Instance ---
 let cachedDb: Db | null = null;
 
-// --- Initialization Function ---
 function initializeDb(): Db {
   console.log('Initializing DB connection and models...'); // Add log for debugging
 
@@ -59,7 +48,6 @@ function initializeDb(): Db {
     throw new Error('Missing DB configuration.');
   }
 
-  // Create the Sequelize instance
   const sequelizeConnection = new Sequelize(dbName, dbUser, dbPassword, {
     host: dbHost,
     port: dbPort,
@@ -74,22 +62,17 @@ function initializeDb(): Db {
     } : undefined,
   });
 
-  // Initialize models centrally
   Administrator.initialize(sequelizeConnection);
   Customer.initialize(sequelizeConnection);
   LicenseTypeLookup.initialize(sequelizeConnection);
   LicenseStatusLookup.initialize(sequelizeConnection); // Added initialization
   License.initialize(sequelizeConnection);
-  // LicenseActionLookup.initialize(sequelizeConnection); // Removed
   Server.initialize(sequelizeConnection);
-  // LicenseLedger.initialize(sequelizeConnection); // Removed
   PurchaseOrder.initialize(sequelizeConnection);
   POLicenseJoin.initialize(sequelizeConnection);
   User.initialize(sequelizeConnection);
   LicenseAudit.initialize(sequelizeConnection); // Added initialization
 
-  // --- Define Associations ---
-  // Call associate methods for all models that have them
   const models = {
     Administrator,
     Customer,
@@ -109,15 +92,12 @@ function initializeDb(): Db {
     }
   });
 
-  // Return the db object
   const dbInstance: Db = {
     sequelize: sequelizeConnection,
     Sequelize,
     Administrator,
     Customer,
     License,
-    // LicenseActionLookup, // Removed
-    // LicenseLedger, // Removed
     LicenseStatusLookup, // Added to instance
     LicenseTypeLookup,
     POLicenseJoin,
@@ -129,7 +109,6 @@ function initializeDb(): Db {
   return dbInstance;
 }
 
-// --- Exported Function to Get Instance ---
 export function getDbInstance(): Db {
   if (!cachedDb) {
     cachedDb = initializeDb();
@@ -137,7 +116,6 @@ export function getDbInstance(): Db {
   return cachedDb;
 }
 
-// Optional: Add a function to test connection (needs to get instance first)
 export async function testDbConnection() {
   try {
     const db = getDbInstance();
@@ -148,6 +126,4 @@ export async function testDbConnection() {
   }
 }
 
-// Export Model types if needed elsewhere (optional)
-// These are the actual classes/constructors
 export { Administrator, Customer, License, /*LicenseActionLookup, LicenseLedger,*/ LicenseStatusLookup, LicenseTypeLookup, POLicenseJoin, PurchaseOrder, Server, User, LicenseAudit }; // Added LicenseStatusLookup and LicenseAudit

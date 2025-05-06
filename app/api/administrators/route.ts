@@ -2,14 +2,11 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getDbInstance } from '@/lib/db'; // Use the lazy initialization function
 import { AdministratorInput } from '@/lib/models/administrator'; // Import input type
 
-// Handler for GET /api/administrators (Get all administrators)
 export async function GET(request: NextRequest) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
-    // Adapted from getAllAdministrators
     const administrators = await db.Administrator.findAll();
 
-    // Omit password from the response
     const safeAdmins = administrators.map(admin => {
         const { password, ...rest } = admin.get({ plain: true });
         return rest;
@@ -22,19 +19,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Handler for POST /api/administrators (Create a new administrator)
 export async function POST(request: NextRequest) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
         const body: AdministratorInput = await request.json();
         const { firstName, lastName, login, email, password, isActive } = body;
 
-        // Basic validation (adapted from createAdministrator)
         if (!firstName || !lastName || !login || !email || !password || isActive === undefined) {
             return new NextResponse('Missing required administrator fields', { status: 400 });
         }
 
-        // Note: Handle password Buffer input (assuming Base64)
         let actualPasswordBuffer: Buffer;
         try {
             if (typeof password !== 'string') {
@@ -49,7 +43,6 @@ export async function POST(request: NextRequest) {
 
         const newAdministrator = await db.Administrator.create(createData);
 
-        // Omit password from the response
         const { password: _, ...safeNewAdmin } = newAdministrator.get({ plain: true });
         return NextResponse.json(safeNewAdmin, { status: 201 });
 

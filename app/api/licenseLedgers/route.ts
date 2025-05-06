@@ -5,11 +5,9 @@ import License from '@/lib/models/license'; // Import for association include & 
 import Server from '@/lib/models/server'; // Import for association include & validation
 import LicenseActionLookup from '@/lib/models/licenseActionLookup'; // Import for association include & validation
 
-// Handler for GET /api/licenseLedgers (Get all ledger entries)
 export async function GET(request: NextRequest) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
-    // Adapted from getAllLicenseLedgers
     const ledgerEntries = await db.LicenseLedger.findAll({
         include: [
             { model: License, as: 'license' },
@@ -24,19 +22,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Handler for POST /api/licenseLedgers (Create a new ledger entry)
 export async function POST(request: NextRequest) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
         const body: LicenseLedgerInput = await request.json();
         const { licenseId, serverId, activityDate, licenseActionId, expirationDate } = body;
 
-        // Basic validation (adapted from createLicenseLedger)
         if (licenseId === undefined || serverId === undefined || !activityDate || licenseActionId === undefined || !expirationDate) {
             return new NextResponse('Missing required fields (licenseId, serverId, activityDate, licenseActionId, expirationDate)', { status: 400 });
         }
 
-        // Validate foreign key existence
         const licenseExists = await db.License.findByPk(licenseId);
         if (!licenseExists) return new NextResponse(`License with ID ${licenseId} not found.`, { status: 400 });
 
@@ -47,7 +42,6 @@ export async function POST(request: NextRequest) {
         if (!actionExists) return new NextResponse(`LicenseActionLookup with ID ${licenseActionId} not found.`, { status: 400 });
 
         const newLedgerEntry = await db.LicenseLedger.create(body);
-        // Fetch again to include associated data in response
         const result = await db.LicenseLedger.findByPk(newLedgerEntry.id, {
              include: [
                 { model: License, as: 'license' },
@@ -59,7 +53,6 @@ export async function POST(request: NextRequest) {
 
     } catch (error: any) {
         console.error('[API_LICENSE_LEDGERS_POST]', error);
-        // Add specific error handling if needed
         return new NextResponse('Internal Server Error', { status: 500 });
     }
 }

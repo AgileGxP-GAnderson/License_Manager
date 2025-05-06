@@ -9,7 +9,6 @@ interface RouteParams {
   };
 }
 
-// Handler for GET /api/users/:id (Get user by ID)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
@@ -28,7 +27,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return new NextResponse('User not found', { status: 404 });
     }
 
-    // Omit password from the response
     const { password, ...safeUser } = user.get({ plain: true });
     return NextResponse.json(safeUser);
 
@@ -38,7 +36,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// Handler for PUT /api/users/:id (Update user)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
@@ -56,11 +53,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
 
         const body: Partial<UserInput> = await request.json();
-        // Prevent updating primary key or timestamps directly via body
         const { id: bodyId, createdAt, updatedAt, customerId: bodyCustomerId, ...updateDataInput } = body;
         const updateData: Partial<UserInput> = { ...updateDataInput }; // Clone
 
-        // Validate customerId if it's being updated
         if (body.customerId !== undefined && body.customerId !== user.customerId) {
              const customerExists = await db.Customer.findByPk(body.customerId);
              if (!customerExists) {
@@ -69,7 +64,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
              updateData.customerId = body.customerId; // Add it back if valid
         }
 
-        // Handle password update (assuming Base64 input)
         if (updateData.password !== undefined) {
              try {
                  if (typeof updateData.password !== 'string') {
@@ -80,14 +74,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                  return new NextResponse('Invalid Base64 encoding for password', { status: 400 });
              }
         } else {
-            // Explicitly delete if not provided to avoid accidental nulling if that's not desired
              delete updateData.password;
         }
 
 
         await user.update(updateData);
 
-        // Fetch again to include customer and omit password
         const updatedUser = await db.User.findByPk(userId, {
             include: [{ model: Customer, as: 'customer' }]
         });
@@ -106,7 +98,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 }
 
-// Handler for DELETE /api/users/:id (Delete user)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
@@ -128,7 +119,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     } catch (error) {
         console.error('[API_USER_DELETE]', error);
-         // Add specific error handling (e.g., foreign key constraints) if needed
         return new NextResponse('Internal Server Error', { status: 500 });
     }
 }

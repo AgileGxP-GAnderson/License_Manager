@@ -16,8 +16,6 @@ export async function GET(
       return NextResponse.json({ message: 'Invalid customer ID format' }, { status: 400 });
     }
 
-    // Find all purchase orders for the customer
-    // Include the associated License model
     const purchaseOrders = await PurchaseOrder.findAll({
       where: { customerId: customerId },
       include: [
@@ -28,13 +26,10 @@ export async function GET(
       ],
       order: [
         ['purchaseDate', 'DESC'], // Optional: Order by purchase date, newest first
-        // You might also want to order licenses within each PO if needed
-        // [{ model: License, as: 'licenses' }, 'id', 'ASC']
       ],
     });
 
     if (!purchaseOrders) {
-      // Return empty array if none found, not necessarily an error
       return NextResponse.json([]);
     }
 

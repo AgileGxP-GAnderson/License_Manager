@@ -1,6 +1,5 @@
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize'; // Import Sequelize type
 
-// Interface for Administrator attributes
 interface AdministratorAttributes {
   id: number;
   firstName: string;
@@ -13,13 +12,10 @@ interface AdministratorAttributes {
   updatedAt?: Date;
 }
 
-// Interface for Administrator creation attributes (optional 'id', 'createdAt', 'updatedAt')
 export interface AdministratorInput extends Optional<AdministratorAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
 
-// Interface for Administrator output attributes (same as attributes)
 export interface AdministratorOutput extends Required<AdministratorAttributes> {}
 
-// Define the Administrator model
 class Administrator extends Model<AdministratorAttributes, AdministratorInput> implements AdministratorAttributes {
   public id!: number;
   public firstName!: string;
@@ -29,11 +25,9 @@ class Administrator extends Model<AdministratorAttributes, AdministratorInput> i
   public isActive!: boolean;
   public email!: string;
 
-  // Timestamps
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
-  // Define static init method to be called from db.ts
   public static initialize(sequelize: Sequelize) {
       Administrator.init({
         id: {
@@ -87,7 +81,6 @@ class Administrator extends Model<AdministratorAttributes, AdministratorInput> i
       });
   }
 
-  // No associations needed for Administrator model at this time
 }
 
 export default Administrator;

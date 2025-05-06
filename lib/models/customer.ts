@@ -1,7 +1,5 @@
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize'; // Import Sequelize type
-// No longer need to import db here for initialization
 
-// Interface for Customer attributes
 interface CustomerAttributes {
   id: number;
   businessName: string;
@@ -18,13 +16,10 @@ interface CustomerAttributes {
   updatedAt?: Date;
 }
 
-// Interface for Customer creation attributes
 export interface CustomerInput extends Optional<CustomerAttributes, 'id' | 'createdAt' | 'updatedAt' | 'contactEmail' | 'contactPhone' | 'businessAddress1' | 'businessAddress2' | 'businessAddressCity' | 'businessAddressState' | 'businessAddressZip' | 'businessAddressCountry'> {}
 
-// Interface for Customer output attributes
 export interface CustomerOutput extends Required<CustomerAttributes> {}
 
-// Define the Customer model
 class Customer extends Model<CustomerAttributes, CustomerInput> implements CustomerAttributes {
   public id!: number;
   public businessName!: string;
@@ -38,15 +33,10 @@ class Customer extends Model<CustomerAttributes, CustomerInput> implements Custo
   public businessAddressZip!: string | null;
   public businessAddressCountry!: string | null;
 
-  // Timestamps
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
-  // Associations (will be defined later if needed)
-  // public readonly purchaseOrders?: PurchaseOrder[];
-  // public readonly users?: User[];
 
-  // Define static init method
   public static initialize(sequelize: Sequelize) {
       Customer.init({
         id: {
@@ -114,15 +104,12 @@ class Customer extends Model<CustomerAttributes, CustomerInput> implements Custo
       });
   }
 
-  // Define static associate method
   public static associate(models: any) {
-    // Customer has many PurchaseOrders
     Customer.hasMany(models.PurchaseOrder, {
       foreignKey: 'customerId',
       as: 'purchaseOrders',
     });
 
-    // Customer has many Users
     Customer.hasMany(models.User, {
       foreignKey: 'customerId',
       as: 'users',

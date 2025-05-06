@@ -101,11 +101,6 @@ class LicenseAudit extends Model<LicenseAuditAttributes, LicenseAuditInput> impl
       foreignKey: 'serverId',
       as: 'server',
     });
-    // If LicenseAudit needs to refer back to License (though licenseIdRef is just an ID)
-    // LicenseAudit.belongsTo(models.License, {
-    //   foreignKey: 'licenseIdRef',
-    //   as: 'license',
-    // });
   }
 }
 

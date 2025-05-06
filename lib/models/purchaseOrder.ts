@@ -10,13 +10,7 @@ import {
   BelongsToManyHasAssociationMixin,
   BelongsToManyHasAssociationsMixin,
 } from 'sequelize';
-// No longer need to import db here for initialization
-// import Customer, { CustomerOutput } from './customer'; // Removed import
-// import License, { LicenseOutput } from './license'; // Removed import
-// Import POLicenseJoin if needed for association definition below
-// import POLicenseJoin from './poLicenseJoin';
 
-// Interface for PurchaseOrder attributes
 interface PurchaseOrderAttributes {
   id: number;
   poName: string;
@@ -27,13 +21,10 @@ interface PurchaseOrderAttributes {
   updatedAt?: Date;
 }
 
-// Interface for PurchaseOrder creation attributes
 export interface PurchaseOrderInput extends Optional<PurchaseOrderAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
 
-// Interface for PurchaseOrder output attributes
 export interface PurchaseOrderOutput extends Required<PurchaseOrderAttributes> {}
 
-// Define the PurchaseOrder model
 class PurchaseOrder extends Model<PurchaseOrderAttributes, PurchaseOrderInput> implements PurchaseOrderAttributes {
   public id!: number;
   public poName!: string;
@@ -41,15 +32,12 @@ class PurchaseOrder extends Model<PurchaseOrderAttributes, PurchaseOrderInput> i
   public customerId!: number;
   public isClosed!: boolean;
 
-  // Timestamps
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
-  // Associations
   public getCustomer!: BelongsToGetAssociationMixin<CustomerOutput>;
   public readonly customer?: CustomerOutput;
 
-  // BelongsToMany association mixins for Licenses
   public addLicense!: BelongsToManyAddAssociationMixin<License, number>;
   public addLicenses!: BelongsToManyAddAssociationMixin<License, number[]>;
   public countLicenses!: BelongsToManyCountAssociationsMixin;
@@ -62,7 +50,6 @@ class PurchaseOrder extends Model<PurchaseOrderAttributes, PurchaseOrderInput> i
   public setLicenses!: BelongsToManySetAssociationsMixin<License, number[]>;
   public readonly licenses?: License[];
 
-  // Define static init method
   public static initialize(sequelize: Sequelize) {
       PurchaseOrder.init({
         id: {
@@ -107,7 +94,6 @@ class PurchaseOrder extends Model<PurchaseOrderAttributes, PurchaseOrderInput> i
       });
   }
 
-  // Define static associate method
   public static associate(models: any) {
      PurchaseOrder.belongsTo(models.Customer, { foreignKey: 'customerId', as: 'customer' });
      PurchaseOrder.belongsToMany(models.License, { through: models.POLicenseJoin, foreignKey: 'poId', otherKey: 'licenseId', as: 'licenses' });

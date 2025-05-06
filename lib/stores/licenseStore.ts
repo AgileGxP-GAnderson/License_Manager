@@ -19,25 +19,20 @@ interface LicenseStoreState {
   isLoadingAudits: boolean; // New state for audit loading status
   auditError: string | null; // New state for audit fetch errors
 
-  // Core operations
   setLicenses: (licenses: License[]) => void;
   clearLicenses: () => void;
-  
-  // License operations with change tracking
+
   updateLicense: (licenseId: number, poId: string, changes: Partial<License>, actionTypeId: number, comment?: string) => void;
   activateLicense: (licenseId: number, poId: string, serverId: number, expirationDate?: Date | null) => void;
   deactivateLicense: (licenseId: number, poId: string) => void;
-  
-  // Change management
+
   hasUnsavedChanges: () => boolean;
   discardChanges: () => void;
   saveChanges: () => Promise<boolean>;
-  
-  // Helpers
+
   getLicenseById: (id: number) => License | undefined;
   getLicenseByPoId: (poId: string) => License[];
 
-  // Audit operations
   fetchLicenseAudits: (licenseId: number) => Promise<void>;
   clearLicenseAudits: () => void; // Action to clear audit records
 }
@@ -76,15 +71,13 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
     }
 
     const now = new Date();
-    // Capture original state for changed fields
     const originalState: Partial<License> = {};
     Object.keys(changes).forEach(key => {
       originalState[key] = license[key];
     });
 
-    // Update local state
     set(state => ({
-      licenses: state.licenses.map(lic => 
+      licenses: state.licenses.map(lic =>
         lic.id === licenseId ? { ...lic, ...changes } : lic
       ),
       pendingChanges: [
@@ -142,7 +135,6 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
     const { pendingChanges, licenses } = get();
     if (pendingChanges.length === 0) return;
 
-    // Create a map of original states, taking the earliest state for each license
     const originalStateMap = new Map();
     [...pendingChanges].reverse().forEach(change => {
       if (!originalStateMap.has(change.licenseId)) {
@@ -150,11 +142,10 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
       }
     });
 
-    // Restore original states
     set({
-      licenses: licenses.map(license => 
-        originalStateMap.has(license.id) 
-          ? { ...license, ...originalStateMap.get(license.id) } 
+      licenses: licenses.map(license =>
+        originalStateMap.has(license.id)
+          ? { ...license, ...originalStateMap.get(license.id) }
           : license
       ),
       pendingChanges: []
@@ -168,7 +159,6 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
     try {
       set({ isLoadingLicenses: true });
 
-      // Group changes by license
       const changesByLicense = pendingChanges.reduce((acc, change) => {
         if (!acc[change.licenseId]) {
           acc[change.licenseId] = [];
@@ -177,11 +167,9 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
         return acc;
       }, {} as Record<number, PendingChange[]>);
 
-      // Process each license's changes
       for (const [licenseId, changes] of Object.entries(changesByLicense)) {
         const latestChange = changes[changes.length - 1];
-        
-        // Update license
+
         const licenseResponse = await fetch(`/api/licenses/${licenseId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -192,7 +180,6 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
           throw new Error(`Failed to update license ${licenseId}`);
         }
 
-        // Create ledger entries for each change
         for (const change of changes) {
           const ledgerResponse = await fetch('/api/licenseLedgers', {
             method: 'POST',
@@ -206,14 +193,13 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
         }
       }
 
-      // Clear pending changes after successful save
       set({ pendingChanges: [], isLoadingLicenses: false });
       return true;
 
     } catch (error) {
-      set({ 
+      set({
         licenseError: error instanceof Error ? error.message : 'Failed to save changes',
-        isLoadingLicenses: false 
+        isLoadingLicenses: false
       });
       return false;
     }
@@ -221,11 +207,10 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
 
   getLicenseById: (id) => get().licenses.find(license => license.id === id),
 
-  getLicenseByPoId: (poId) => get().licenses.filter(license => 
+  getLicenseByPoId: (poId) => get().licenses.filter(license =>
     license.purchaseOrders?.some(po => po.id === poId)
   ),
 
-  // Audit operations implementation
   fetchLicenseAudits: async (licenseId) => {
     set({ isLoadingAudits: true, auditError: null, currentLicenseAudits: [] });
     try {
@@ -238,10 +223,10 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
       set({ currentLicenseAudits: data, isLoadingAudits: false });
     } catch (error) {
       console.error("Error fetching license audit records from store:", error);
-      set({ 
-        auditError: error instanceof Error ? error.message : 'An unknown error occurred', 
-        isLoadingAudits: false, 
-        currentLicenseAudits: [] 
+      set({
+        auditError: error instanceof Error ? error.message : 'An unknown error occurred',
+        isLoadingAudits: false,
+        currentLicenseAudits: []
       });
     }
   },

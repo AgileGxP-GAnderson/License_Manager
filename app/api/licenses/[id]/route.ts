@@ -9,7 +9,6 @@ interface RouteParams {
   };
 }
 
-// Handler for GET /api/licenses/:id (Get license by ID)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
@@ -36,7 +35,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// Handler for PUT /api/licenses/:id (Update license)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
@@ -54,11 +52,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
 
         const body: Partial<LicenseInput> = await request.json();
-        // Prevent updating primary key, uniqueId, or timestamps directly
         const { id: bodyId, uniqueId: bodyUniqueId, createdAt, updatedAt, typeId: bodyTypeId, ...updateDataInput } = body;
         const updateData: Partial<LicenseInput> = { ...updateDataInput }; // Clone
 
-         // Validate typeId if it's being updated
         if (body.typeId !== undefined && body.typeId !== license.typeId) {
              const typeExists = await db.LicenseTypeLookup.findByPk(body.typeId);
              if (!typeExists) {
@@ -67,10 +63,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
              updateData.typeId = body.typeId; // Add it back if valid
         }
 
-        // Note: Handling updates to associated purchase orders would require additional logic here
 
         await license.update(updateData);
-        // Fetch again to include type data in response
         const result = await db.License.findByPk(licenseId, {
              include: [{ model: LicenseTypeLookup, as: 'type' }]
         });
@@ -78,12 +72,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     } catch (error: any) {
         console.error('[API_LICENSE_PUT]', error);
-        // Add specific error handling if needed
         return new NextResponse('Internal Server Error', { status: 500 });
     }
 }
 
-// Handler for DELETE /api/licenses/:id (Delete license)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const db = getDbInstance(); // Get DB instance inside the handler
     try {
@@ -100,14 +92,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             return new NextResponse('License not found', { status: 404 });
         }
 
-        // Note: Consider implications of deleting a License (e.g., associated ledger entries, join table entries).
-        // Foreign key constraints might prevent deletion or cause cascading deletes.
         await license.destroy();
         return new NextResponse(null, { status: 204 }); // 204 No Content
 
     } catch (error: any) {
         console.error('[API_LICENSE_DELETE]', error);
-         // Add specific error handling for foreign key constraints if needed
          if (error.name === 'SequelizeForeignKeyConstraintError') {
              return new NextResponse('Cannot delete License because it has associated data (e.g., ledger entries, PO links).', { status: 409 });
          }

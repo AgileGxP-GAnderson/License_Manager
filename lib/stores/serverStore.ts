@@ -6,7 +6,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
   loading: false,
   error: null,
 
-  // Action: Fetch Servers by Customer ID
   fetchServersByCustomerId: async (customerId) => {
     if (!customerId) {
       console.warn("fetchServersByCustomerId called with no customerId.");
@@ -15,14 +14,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
     set({ loading: true, error: null });
     try {
-      // Assuming the API endpoint supports filtering by customerId via query param
       const response = await fetch(`/api/servers?customerId=${customerId}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: `Failed to fetch servers (${response.status})` }));
         throw new Error(errorData.message || `Failed to fetch servers (${response.status})`);
       }
       const data: Server[] = await response.json();
-      // Assuming the API returns servers without the fingerprint
       set({ servers: data, loading: false });
     } catch (error) {
       let errorMessage = 'An unknown error occurred while fetching servers.';
@@ -34,7 +31,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  // Action: Create Server
   createServer: async (customerId, serverData) => {
     console.log("Creating server with data:", serverData);
     const customerIdNum = typeof customerId === 'string' ? parseInt(customerId, 10) : customerId;
@@ -49,8 +45,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
       const payload = {
         ...serverData,
         customerId: customerIdNum,
-        // Handle fingerprint conversion if needed (e.g., to base64 string)
-        // fingerprint: typeof serverData.fingerprint === 'string' ? serverData.fingerprint : serverData.fingerprint.toString('base64'),
       };
       console.log("Payload for server creation:", payload);
       const response = await fetch('/api/servers', {
@@ -65,12 +59,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
       }
 
       const newServer: Server = await response.json();
-      // +++ Add logging here +++
       console.log("API returned new server:", newServer);
 
       set((state) => {
         const updatedServers = [...state.servers, newServer];
-        // +++ Add logging here +++
         console.log("Store state updated. New allServers count:", updatedServers.length, updatedServers);
         return {
           servers: updatedServers,
@@ -91,12 +83,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  // Selector: Get Server by ID
   getServerById: (id) => {
     const serverIdNum = typeof id === 'string' ? parseInt(id, 10) : id;
     return get().servers.find((server) => server.id === serverIdNum);
   },
 
-  // Action: Clear Servers
   clearServers: () => set({ servers: [], loading: false, error: null }),
 }));
