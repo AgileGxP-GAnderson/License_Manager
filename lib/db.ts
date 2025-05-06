@@ -89,48 +89,25 @@ function initializeDb(): Db {
   LicenseAudit.initialize(sequelizeConnection); // Added initialization
 
   // --- Define Associations ---
-  // Customer associations
-  Customer.hasMany(PurchaseOrder, { foreignKey: 'customerId', as: 'purchaseOrders' });
-  Customer.hasMany(User, { foreignKey: 'customerId', as: 'users' });
+  // Call associate methods for all models that have them
+  const models = {
+    Administrator,
+    Customer,
+    License,
+    LicenseStatusLookup,
+    LicenseTypeLookup,
+    POLicenseJoin,
+    PurchaseOrder,
+    Server,
+    User,
+    LicenseAudit
+  };
 
-  // License associations
-  // License.hasMany(LicenseLedger, { foreignKey: 'licenseId', as: 'ledgerEntries' }); // Removed
-  License.belongsTo(LicenseTypeLookup, { foreignKey: 'typeId', as: 'type' });
-  License.belongsTo(LicenseStatusLookup, { foreignKey: 'licenseStatusId', as: 'licenseStatus' }); // Ensure this is present
-  License.belongsTo(Server, { foreignKey: 'serverId', as: 'server' }); // Added association
-  License.belongsToMany(PurchaseOrder, {
-    through: POLicenseJoin,
-    foreignKey: 'licenseId',
-    otherKey: 'poId',
-    as: 'purchaseOrders',
+  Object.values(models).forEach(model => {
+    if (model.associate) {
+      model.associate(models);
+    }
   });
-
-  // LicenseTypeLookup associations
-  LicenseTypeLookup.hasMany(License, { foreignKey: 'typeId', as: 'licensesOfType' });
-
-  // LicenseStatusLookup associations (if any, e.g., hasMany Licenses)
-  LicenseStatusLookup.hasMany(License, { foreignKey: 'licenseStatusId', as: 'licensesWithStatus' });
-
-  // Server associations
-  Server.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' }); // Added association
-  Server.hasMany(License, { foreignKey: 'serverId', as: 'licenses' }); // Added association
-  // Server.hasMany(LicenseLedger, { foreignKey: 'serverId', as: 'ledgerEntries' }); // Removed
-
-  // PurchaseOrder associations
-  PurchaseOrder.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
-  PurchaseOrder.belongsToMany(License, {
-    through: POLicenseJoin,
-    foreignKey: 'poId',
-    otherKey: 'licenseId',
-    as: 'licenses',
-  });
-
-  // User associations
-  User.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
-
-  // POLicenseJoin associations
-  POLicenseJoin.belongsTo(PurchaseOrder, { foreignKey: 'poId', as: 'purchaseOrder' });
-  POLicenseJoin.belongsTo(License, { foreignKey: 'licenseId', as: 'license' });
 
   // Return the db object
   const dbInstance: Db = {

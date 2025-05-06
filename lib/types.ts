@@ -147,3 +147,27 @@ export interface ServerState {
   getServerById: (id: string | number) => Server | undefined;
   clearServers: () => void;
 }
+
+export interface LicenseAudit {
+  id: number;
+  licenseIdRef: number; // Reference to the License ID
+  uniqueId: string; // Unique ID of the license at the time of audit
+  externalName?: string | null;
+  licenseStatusId: number;
+  typeId: number;
+  comment?: string | null;
+  serverId?: number | null;
+  updatedBy?: string | null; // User or process that triggered the change
+  createdAt: Date | string; // Timestamp of the audit record
+  // Optional: Add fields for human-readable names if resolved by the backend
+  statusName?: string;
+  typeName?: string;
+  serverName?: string;
+}
+
+// Input type for creating a license, used in AddLicenseForm
+export interface LicenseInput {
+    poId: string; // Purchase Order ID
+    typeId: number;
+    duration: number;
+}

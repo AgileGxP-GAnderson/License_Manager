@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { format, isValid } from "date-fns"
-import { ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronRight, History } from "lucide-react" // Added History icon
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useServerStore } from "@/lib/stores/serverStore"
 import { usePurchaseOrderStore } from "@/lib/stores/purchaseOrderStore"
 import { useLicenseStore } from "@/lib/stores/licenseStore"
-import { PurchaseOrder, License, LicenseInput } from '@/lib/types';
+import { PurchaseOrder, License, LicenseInput, LicenseAudit } from '@/lib/types'; // Added LicenseAudit
 
 interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrder[];
@@ -158,10 +158,23 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
 }) => {
   const { getServerById } = useServerStore()
   const { activateLicense, addLicenseToPurchaseOrder, fetchPurchaseOrdersByCustomerId } = usePurchaseOrderStore();
-  const { updateLicense, deactivateLicense, hasUnsavedChanges } = useLicenseStore();
+  // Updated to use licenseStore for audit data and actions
+  const { 
+    updateLicense, 
+    deactivateLicense, 
+    hasUnsavedChanges, 
+    fetchLicenseAudits, 
+    currentLicenseAudits, 
+    isLoadingAudits, 
+    auditError,
+    clearLicenseAudits // Added clearLicenseAudits
+  } = useLicenseStore(); 
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
   const [isAddLicenseModalOpen, setIsAddLicenseModalOpen] = useState(false);
   const [currentPoIdForModal, setCurrentPoIdForModal] = useState<string | null>(null);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  // Removed local state for audit records and loading, now using store state
+  const [selectedLicenseForAudit, setSelectedLicenseForAudit] = useState<License | null>(null);
 
   const toggleItem = (id: string) => {
     setOpenItems((prev) => ({
@@ -207,6 +220,18 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
       alert(`Error saving license: ${saveError.message || 'Unknown error'}`);
       throw saveError;
     }
+  };
+
+  const handleOpenAuditModal = async (license: License) => {
+    setSelectedLicenseForAudit(license);
+    setIsAuditModalOpen(true);
+    await fetchLicenseAudits(license.id); // Call store action
+  };
+
+  const handleCloseAuditModal = () => {
+    setIsAuditModalOpen(false);
+    setSelectedLicenseForAudit(null);
+    clearLicenseAudits(); // Clear audit data from store on modal close
   };
 
   const formatDate = (dateValue: Date | string | undefined | null): string => {
@@ -291,11 +316,12 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                        <TableHeader>
                         <TableRow>
                           <TableHead>License Type</TableHead>
-                          <TableHead>Status / Last Action</TableHead>
+                          <TableHead>Status</TableHead>
                           <TableHead>Duration</TableHead>
                           <TableHead>Last Activity Date</TableHead>
                           <TableHead>Expiration Date</TableHead>
                           <TableHead>Server Name</TableHead>
+                          <TableHead className="text-center">History</TableHead> {/* New Column for History Icon */}
                           {isAdminView ? <TableHead className="text-right">Actions</TableHead> : null}
                         </TableRow>
                       </TableHeader>
@@ -321,6 +347,11 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                               {license.type?.name === "Perpetual" ? "Perpetual" : formatDate(license.expirationDate)}
                             </TableCell>
                             <TableCell>{license.latestServerName ?? "None"}</TableCell>
+                            <TableCell className="text-center"> {/* Cell for History Icon */}
+                              <Button variant="ghost" size="icon" onClick={() => handleOpenAuditModal(license)} title="View License History">
+                                <History className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                             {isAdminView ? (
                               <TableCell className="text-right">
                                 {license.status === "Activation Requested" && (
@@ -358,6 +389,54 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
             />
         )}
       </DialogContent>
+
+      {/* License Audit Modal */}
+      <Dialog open={isAuditModalOpen} onOpenChange={setIsAuditModalOpen}>
+        <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>License Audit Trail: {selectedLicenseForAudit?.uniqueId}</DialogTitle>
+            <DialogDescription>
+              Showing history for license {selectedLicenseForAudit?.externalName || selectedLicenseForAudit?.uniqueId}.
+              {auditError && <p className="text-red-500 mt-2">Error: {auditError}</p>} {/* Display audit error from store */}
+            </DialogDescription>
+          </DialogHeader>
+          {isLoadingAudits ? ( // Use isLoadingAudits from store
+            <p>Loading audit records...</p>
+          ) : currentLicenseAudits.length > 0 ? ( // Use currentLicenseAudits from store
+            <div className="max-h-[60vh] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Server</TableHead>
+                    <TableHead>Comment</TableHead>
+                    <TableHead>Updated By</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currentLicenseAudits.map((audit) => ( // Use currentLicenseAudits from store
+                    <TableRow key={audit.id}>
+                      <TableCell>{formatDate(audit.createdAt)}</TableCell>
+                      <TableCell>{audit.statusName}</TableCell>
+                      <TableCell>{audit.typeName}</TableCell>
+                      <TableCell>{audit.serverName}</TableCell>
+                      <TableCell>{audit.comment || '-'}</TableCell>
+                      <TableCell>{audit.updatedBy || 'System'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p>No audit records found for this license.</p>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleCloseAuditModal}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }

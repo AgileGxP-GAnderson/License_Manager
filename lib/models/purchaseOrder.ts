@@ -107,11 +107,11 @@ class PurchaseOrder extends Model<PurchaseOrderAttributes, PurchaseOrderInput> i
       });
   }
 
-  // Define static associate method if needed
-  // public static associate(models: any) {
-  //    PurchaseOrder.belongsTo(models.Customer, { foreignKey: 'customerId', as: 'customer' });
-  //    PurchaseOrder.belongsToMany(models.License, { through: models.POLicenseJoin, foreignKey: 'poId', otherKey: 'licenseId', as: 'licenses' });
-  // }
+  // Define static associate method
+  public static associate(models: any) {
+     PurchaseOrder.belongsTo(models.Customer, { foreignKey: 'customerId', as: 'customer' });
+     PurchaseOrder.belongsToMany(models.License, { through: models.POLicenseJoin, foreignKey: 'poId', otherKey: 'licenseId', as: 'licenses' });
+  }
 }
 
 export default PurchaseOrder;

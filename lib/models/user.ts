@@ -101,6 +101,15 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
         timestamps: true,
       });
   }
+
+  // Define static associate method
+  public static associate(models: any) {
+    // User belongs to a Customer
+    User.belongsTo(models.Customer, {
+      foreignKey: 'customerId',
+      as: 'customer',
+    });
+  }
 }
 
 export default User;

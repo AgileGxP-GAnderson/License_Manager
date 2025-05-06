@@ -79,6 +79,12 @@ class POLicenseJoin extends Model<POLicenseJoinAttributes, POLicenseJoinInput> i
         timestamps: true,
       });
   }
+
+  // Define static associate method
+  public static associate(models: any) {
+    POLicenseJoin.belongsTo(models.PurchaseOrder, { foreignKey: 'poId', as: 'purchaseOrder' });
+    POLicenseJoin.belongsTo(models.License, { foreignKey: 'licenseId', as: 'license' });
+  }
 }
 
 export default POLicenseJoin;

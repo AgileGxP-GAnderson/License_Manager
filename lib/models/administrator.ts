@@ -87,10 +87,7 @@ class Administrator extends Model<AdministratorAttributes, AdministratorInput> i
       });
   }
 
-   // Define static associate method if needed (or keep associations central)
-   // public static associate(models: any) {
-   //   // define association here
-   // }
+  // No associations needed for Administrator model at this time
 }
 
 export default Administrator;

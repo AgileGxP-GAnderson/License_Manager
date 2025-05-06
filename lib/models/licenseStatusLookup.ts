@@ -50,6 +50,11 @@ class LicenseStatusLookup extends Model<LicenseStatusLookupAttributes, LicenseSt
       timestamps: true,
     });
   }
+
+  // Define static associate method
+  public static associate(models: any) {
+    LicenseStatusLookup.hasMany(models.License, { foreignKey: 'licenseStatusId', as: 'licensesWithStatus' });
+  }
 }
 
 export default LicenseStatusLookup;

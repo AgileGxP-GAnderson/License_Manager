@@ -108,9 +108,7 @@ class Server extends Model<ServerAttributes, ServerInput> implements ServerAttri
   // Define static associate method
   public static associate(models: any) {
     Server.belongsTo(models.Customer, { foreignKey: 'customerId', as: 'customer' });
-    // Server.hasMany(models.License, { foreignKey: 'serverId', as: 'licenses' }); // Removed, association handled in db.ts
-    // If Server now directly relates to Licenses that were previously linked via LicenseLedger:
-    // Server.hasMany(models.License, { foreignKey: 'serverId', as: 'licenses' }); 
+    Server.hasMany(models.License, { foreignKey: 'serverId', as: 'licenses' });
   }
 }
 

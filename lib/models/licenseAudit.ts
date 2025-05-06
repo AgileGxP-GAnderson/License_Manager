@@ -87,6 +87,26 @@ class LicenseAudit extends Model<LicenseAuditAttributes, LicenseAuditInput> impl
       timestamps: true,
     });
   }
+
+  public static associate(models: any) {
+    LicenseAudit.belongsTo(models.LicenseStatusLookup, {
+      foreignKey: 'licenseStatusId',
+      as: 'licenseStatus',
+    });
+    LicenseAudit.belongsTo(models.LicenseTypeLookup, {
+      foreignKey: 'typeId',
+      as: 'licenseType',
+    });
+    LicenseAudit.belongsTo(models.Server, {
+      foreignKey: 'serverId',
+      as: 'server',
+    });
+    // If LicenseAudit needs to refer back to License (though licenseIdRef is just an ID)
+    // LicenseAudit.belongsTo(models.License, {
+    //   foreignKey: 'licenseIdRef',
+    //   as: 'license',
+    // });
+  }
 }
 
 export default LicenseAudit;

@@ -189,8 +189,8 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
   public static associate(models_param: any) { // Renamed models to models_param to avoid conflict
     models = models_param; // Assign to module-level models variable
     License.belongsTo(models.LicenseTypeLookup, { foreignKey: 'typeId', as: 'type' });
-    License.belongsTo(models.LicenseStatusLookup, { foreignKey: 'licenseStatusId', as: 'licenseStatus' }); // Added association
-    // License.belongsTo(models.Server, { foreignKey: 'serverId', as: 'server' }); // Removed, association handled in db.ts
+    License.belongsTo(models.LicenseStatusLookup, { foreignKey: 'licenseStatusId', as: 'licenseStatus' });
+    License.belongsTo(models.Server, { foreignKey: 'serverId', as: 'server' }); // Added missing belongsTo Server
     License.belongsToMany(models.PurchaseOrder, {
       through: models.POLicenseJoin, // Use models.POLicenseJoin
       foreignKey: 'licenseId',

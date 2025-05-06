@@ -50,6 +50,11 @@ class LicenseTypeLookup extends Model<LicenseTypeLookupAttributes, LicenseTypeLo
       timestamps: true,
     });
   }
+
+  // Define static associate method
+  public static associate(models: any) {
+    LicenseTypeLookup.hasMany(models.License, { foreignKey: 'typeId', as: 'licensesOfType' });
+  }
 }
 
 export default LicenseTypeLookup;

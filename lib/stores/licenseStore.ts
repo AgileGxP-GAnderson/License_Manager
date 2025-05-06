@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { License } from '@/lib/types';
+import { License, LicenseAudit } from '@/lib/types';
 
 interface PendingChange {
   id: string;
@@ -15,6 +15,9 @@ interface LicenseStoreState {
   pendingChanges: PendingChange[];
   isLoadingLicenses: boolean;
   licenseError: string | null;
+  currentLicenseAudits: LicenseAudit[]; // New state for audit records
+  isLoadingAudits: boolean; // New state for audit loading status
+  auditError: string | null; // New state for audit fetch errors
 
   // Core operations
   setLicenses: (licenses: License[]) => void;
@@ -33,6 +36,10 @@ interface LicenseStoreState {
   // Helpers
   getLicenseById: (id: number) => License | undefined;
   getLicenseByPoId: (poId: string) => License[];
+
+  // Audit operations
+  fetchLicenseAudits: (licenseId: number) => Promise<void>;
+  clearLicenseAudits: () => void; // Action to clear audit records
 }
 
 const initialState = {
@@ -40,6 +47,9 @@ const initialState = {
   pendingChanges: [],
   isLoadingLicenses: false,
   licenseError: null,
+  currentLicenseAudits: [], // Initial value for audit records
+  isLoadingAudits: false, // Initial value for audit loading
+  auditError: null, // Initial value for audit error
 };
 
 export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
@@ -213,5 +223,29 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
 
   getLicenseByPoId: (poId) => get().licenses.filter(license => 
     license.purchaseOrders?.some(po => po.id === poId)
-  )
+  ),
+
+  // Audit operations implementation
+  fetchLicenseAudits: async (licenseId) => {
+    set({ isLoadingAudits: true, auditError: null, currentLicenseAudits: [] });
+    try {
+      const response = await fetch(`/api/licenseAudit?licenseId=${licenseId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch audit records');
+      }
+      const data = await response.json();
+      set({ currentLicenseAudits: data, isLoadingAudits: false });
+    } catch (error) {
+      console.error("Error fetching license audit records from store:", error);
+      set({ 
+        auditError: error instanceof Error ? error.message : 'An unknown error occurred', 
+        isLoadingAudits: false, 
+        currentLicenseAudits: [] 
+      });
+    }
+  },
+
+  clearLicenseAudits: () => set({ currentLicenseAudits: [], isLoadingAudits: false, auditError: null }),
+
 }));
