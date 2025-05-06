@@ -1,7 +1,5 @@
 import { DataTypes, Model, Optional, BelongsToGetAssociationMixin, Sequelize } from 'sequelize'; // Import Sequelize type
 // No longer need to import db here for initialization
-import PurchaseOrder, { PurchaseOrderOutput } from './purchaseOrder'; // Import for association
-import License, { LicenseOutput } from './license'; // Import for association
 
 // Interface for PO_License_Join attributes
 interface POLicenseJoinAttributes {
@@ -49,7 +47,7 @@ class POLicenseJoin extends Model<POLicenseJoinAttributes, POLicenseJoinInput> i
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
-            model: PurchaseOrder,
+            model: 'PurchaseOrders', // Changed from PurchaseOrder model to table name string
             key: 'id',
           },
         },
@@ -57,7 +55,7 @@ class POLicenseJoin extends Model<POLicenseJoinAttributes, POLicenseJoinInput> i
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
-            model: License,
+            model: 'Licenses', // Changed from License model to table name string
             key: 'id',
           },
         },
@@ -81,12 +79,6 @@ class POLicenseJoin extends Model<POLicenseJoinAttributes, POLicenseJoinInput> i
         timestamps: true,
       });
   }
-
-   // Define static associate method if needed
-  // public static associate(models: any) {
-  //    POLicenseJoin.belongsTo(models.PurchaseOrder, { foreignKey: 'poId', as: 'purchaseOrder' });
-  //    POLicenseJoin.belongsTo(models.License, { foreignKey: 'licenseId', as: 'license' });
-  // }
 }
 
 export default POLicenseJoin;

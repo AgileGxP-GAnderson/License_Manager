@@ -11,8 +11,8 @@ import {
   BelongsToManyHasAssociationsMixin,
 } from 'sequelize';
 // No longer need to import db here for initialization
-import Customer, { CustomerOutput } from './customer';
-import License, { LicenseOutput } from './license'; // Import License for BelongsToMany association
+// import Customer, { CustomerOutput } from './customer'; // Removed import
+// import License, { LicenseOutput } from './license'; // Removed import
 // Import POLicenseJoin if needed for association definition below
 // import POLicenseJoin from './poLicenseJoin';
 
@@ -82,7 +82,7 @@ class PurchaseOrder extends Model<PurchaseOrderAttributes, PurchaseOrderInput> i
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
-            model: 'Customers', // Name of the target table
+            model: 'Customers', // Changed from model class to table name string
             key: 'id',
           },
         },

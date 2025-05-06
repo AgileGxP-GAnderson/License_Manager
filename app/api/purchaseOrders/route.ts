@@ -5,9 +5,7 @@ import License from '@/lib/models/license';
 import Customer from '@/lib/models/customer';
 import PurchaseOrder from '@/lib/models/purchaseOrder';
 import { WhereOptions, Sequelize } from 'sequelize';
-import LicenseLedger from '@/lib/models/licenseLedger';
 import Server from '@/lib/models/server';
-import LicenseActionLookup from '@/lib/models/licenseActionLookup';
 import LicenseTypeLookup from '@/lib/models/licenseTypeLookup'; // Import LicenseTypeLookup
 import POLicenseJoin from '@/lib/models/poLicenseJoin'; // Import the join model
 
@@ -74,27 +72,10 @@ export async function GET(request: NextRequest) {
               required: false,
             },
             {
-              model: LicenseLedger,
-              as: 'ledgerEntries',
-              attributes: ['serverId', 'activityDate', 'licenseActionId', 'expirationDate'], // Ensure licenseActionId is selected if needed elsewhere
-              required: false,
-              separate: true,
-              order: [['activityDate', 'DESC']],
-              limit: 1,
-              include: [ // Nested include within Ledger
-                {
-                  model: Server,
-                  as: 'server',
-                  attributes: ['id', 'name'],
-                  required: false
-                },
-                { // **** This part fetches the action name ****
-                  model: LicenseActionLookup,
-                  as: 'licenseAction', // Verify this alias matches your model association
-                  attributes: ['id', 'name'], // Selecting the 'name'
-                  required: false
-                }
-              ]
+              model: Server,
+              as: 'server',
+              attributes: ['id', 'name'],
+              required: false
             }
           ]
         }
@@ -116,20 +97,17 @@ export async function GET(request: NextRequest) {
             const latestLedgerEntry = license.ledgerEntries?.[0];
 
             // Determine status based on latest action (optional, can also do on UI)
-            let status = 'Available'; // Default
-            const actionName = latestLedgerEntry?.licenseAction?.name;
-            if (actionName === 'Activated') status = 'Activated';
-            else if (actionName === 'Activation Requested') status = 'Activation Requested';
-            else if (actionName === 'Deactivated') status = 'Available';
-            else if (actionName === 'Expired') status = 'Expired';
-            // Add more conditions as needed
+            let status = 'Unknown'; // Default status after removing LicenseActionLookup logic
+            // You may need to implement new logic here to determine status based on License fields
+            // For example, if License has a direct status field or serverId determines activation:
+            if (license.serverId) status = 'Activated';
+            else status = 'Available'; // Simplified example
 
             return {
                 ...license,
                 totalDuration: duration, // Add duration directly
                 // Add derived/flattened fields for convenience
                 latestServerName: latestLedgerEntry?.server?.name ?? null,
-                lastActionName: actionName ?? 'Unknown', // Use 'Unknown' or 'N/A' as fallback
                 status: status, // Use derived status
                 activationDate: latestLedgerEntry?.activityDate ?? null, // Use latest activity date
                 expirationDate: latestLedgerEntry?.expirationDate ?? null, // Use ledger expiration date

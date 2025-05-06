@@ -113,12 +113,6 @@ class Customer extends Model<CustomerAttributes, CustomerInput> implements Custo
         timestamps: true,
       });
   }
-
-  // Define static associate method if needed
-  // public static associate(models: any) {
-  //   // Customer.hasMany(models.PurchaseOrder, { foreignKey: 'customerId', as: 'purchaseOrders' });
-  //   // Customer.hasMany(models.User, { foreignKey: 'customerId', as: 'users' });
-  // }
 }
 
 export default Customer;

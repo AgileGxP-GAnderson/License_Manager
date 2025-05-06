@@ -1,23 +1,12 @@
 import { create } from 'zustand';
 import { License } from '@/lib/types';
 
-interface PendingLicenseLedgerEntry {
-  licenseId: number;
-  licenseUniqueId: string;
-  serverId?: number | null;
-  activityDate: Date;
-  expirationDate?: Date | null;
-  licenseActionId: number;
-  comment?: string;
-}
-
 interface PendingChange {
   id: string;
   licenseId: number;
   poId: string;
   originalState: Partial<License>;
   newState: Partial<License>;
-  ledgerEntry: PendingLicenseLedgerEntry;
   timestamp: Date;
 }
 
@@ -83,18 +72,6 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
       originalState[key] = license[key];
     });
 
-    // Create ledger entry
-    const ledgerEntry: PendingLicenseLedgerEntry = {
-      licenseId,
-      licenseUniqueId: license.uniqueId,
-      activityDate: now,
-      licenseActionId: actionTypeId,
-      comment,
-      // Only include these if they're changing
-      serverId: changes.serverId ?? undefined,
-      expirationDate: changes.expirationDate ?? undefined,
-    };
-
     // Update local state
     set(state => ({
       licenses: state.licenses.map(lic => 
@@ -108,7 +85,6 @@ export const useLicenseStore = create<LicenseStoreState>()((set, get) => ({
           poId,
           originalState,
           newState: changes,
-          ledgerEntry,
           timestamp: now
         }
       ]

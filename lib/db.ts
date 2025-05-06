@@ -96,6 +96,7 @@ function initializeDb(): Db {
   // License associations
   // License.hasMany(LicenseLedger, { foreignKey: 'licenseId', as: 'ledgerEntries' }); // Removed
   License.belongsTo(LicenseTypeLookup, { foreignKey: 'typeId', as: 'type' });
+  License.belongsTo(Server, { foreignKey: 'serverId', as: 'server' }); // Added association
   License.belongsToMany(PurchaseOrder, {
     through: POLicenseJoin,
     foreignKey: 'licenseId',
@@ -106,10 +107,9 @@ function initializeDb(): Db {
   // LicenseTypeLookup associations
   LicenseTypeLookup.hasMany(License, { foreignKey: 'typeId', as: 'licensesOfType' });
 
-  // LicenseActionLookup associations - Removed
-  // LicenseActionLookup.hasMany(LicenseLedger, { foreignKey: 'licenseActionId', as: 'ledgerEntries' });
-
   // Server associations
+  Server.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' }); // Added association
+  Server.hasMany(License, { foreignKey: 'serverId', as: 'licenses' }); // Added association
   // Server.hasMany(LicenseLedger, { foreignKey: 'serverId', as: 'ledgerEntries' }); // Removed
 
   // PurchaseOrder associations

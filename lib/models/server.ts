@@ -1,6 +1,6 @@
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize';
-// Import Customer model if associations are defined here
-// import Customer from './customer'; // Adjust path if needed
+import Customer, { CustomerOutput } from './customer'; // Import Customer for association
+// import License from './license'; // Removed import, association handled in db.ts
 
 // Interface for Server attributes
 interface ServerAttributes {
@@ -35,8 +35,8 @@ class Server extends Model<ServerAttributes, ServerInput> implements ServerAttri
   public readonly updatedAt!: Date;
 
   // Associations (will be defined later if needed)
-  // public readonly customer?: Customer; // Add if association is defined
-  // public readonly licenseLedgers?: LicenseLedger[];
+  public readonly customer?: CustomerOutput;
+  // public readonly licenses?: License[]; // Keep for type safety, but association is in db.ts
 
   // Define static init method
   public static initialize(sequelize: Sequelize) {
@@ -51,7 +51,7 @@ class Server extends Model<ServerAttributes, ServerInput> implements ServerAttri
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: 'Customers', // Assuming your customer table is named 'Customers'
+                model: 'Customers', // Ensured this is a table name string
                 key: 'id',
             },
             onUpdate: 'CASCADE',
@@ -105,11 +105,13 @@ class Server extends Model<ServerAttributes, ServerInput> implements ServerAttri
       });
   }
 
-  // Define static associate method if needed
-  // public static associate(models: any) {
-  //    Server.belongsTo(models.Customer, { foreignKey: 'customerId', as: 'customer' });
-  //    Server.hasMany(models.LicenseLedger, { foreignKey: 'serverId', as: 'ledgerEntries' });
-  // }
+  // Define static associate method
+  public static associate(models: any) {
+    Server.belongsTo(models.Customer, { foreignKey: 'customerId', as: 'customer' });
+    // Server.hasMany(models.License, { foreignKey: 'serverId', as: 'licenses' }); // Removed, association handled in db.ts
+    // If Server now directly relates to Licenses that were previously linked via LicenseLedger:
+    // Server.hasMany(models.License, { foreignKey: 'serverId', as: 'licenses' }); 
+  }
 }
 
 export default Server;

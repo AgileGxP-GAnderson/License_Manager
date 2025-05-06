@@ -1,6 +1,5 @@
 import { DataTypes, Model, Optional, BelongsToGetAssociationMixin, Sequelize } from 'sequelize'; // Import Sequelize type
 // No longer need to import db here for initialization
-import Customer, { CustomerOutput } from './customer'; // Import Customer for association
 
 // Interface for User attributes
 interface UserAttributes {
@@ -53,7 +52,7 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
           type: DataTypes.BIGINT, // Changed from DataTypes.INTEGER
           allowNull: false,
           references: {
-            model: Customer,
+            model: 'Customers', // Changed from Customer model to table name string
             key: 'id',
           },
         },
@@ -101,11 +100,6 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
         tableName: '"Users"', // Ensures exact, case-sensitive table name
         timestamps: true,
       });
-  }
-
-  // Define static associate method if needed
-  public static associate(models: any) {
-     User.belongsTo(models.Customer, { foreignKey: 'customerId', as: 'customer' });
   }
 }
 

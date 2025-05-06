@@ -24,8 +24,9 @@ import {
 // No longer need to import db here for initialization
 import LicenseTypeLookup, { LicenseTypeLookupOutput } from './licenseTypeLookup';
 import PurchaseOrder from './purchaseOrder'; // Import PurchaseOrder for BelongsToMany association
-import LicenseLedger from './licenseLedger'; // Import LicenseLedger for HasMany association
+// import LicenseLedger from './licenseLedger'; // Import LicenseLedger for HasMany association
 import LicenseAudit from './licenseAudit'; // Import LicenseAudit model
+// import Server from './server'; // Removed import, association handled in db.ts
 
 // Interface for License attributes
 interface LicenseAttributes {
@@ -90,7 +91,7 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
   public removeLedgerEntry!: HasManyRemoveAssociationMixin<LicenseLedger, number>;
   public removeLedgerEntries!: HasManyRemoveAssociationsMixin<LicenseLedger, number>;
   public setLedgerEntries!: HasManySetAssociationsMixin<LicenseLedger, number>;
-  public readonly ledgerEntries?: LicenseLedger[];
+  // public readonly ledgerEntries?: LicenseLedger[]; // Removed
 
   // Define static init method
   public static initialize(sequelize: Sequelize) {
@@ -114,7 +115,7 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
-            model: 'LicenseStatusLookup',
+            model: 'LicenseStatusLookup', // Changed from model class to table name string
             key: 'id',
           },
         },
@@ -122,7 +123,7 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
-            model: 'LicenseTypeLookup',
+            model: 'LicenseTypeLookup', // Changed from model class to table name string
             key: 'id',
           },
         },
@@ -134,7 +135,7 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
           type: DataTypes.INTEGER,
           allowNull: true,
           references: {
-            model: 'Servers',
+            model: 'Servers', // Ensured this is a table name string
             key: 'id',
           },
         },
@@ -177,13 +178,17 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
       });
   }
 
-  // Define static associate method if needed
-  // public static associate(models: any) {
-  //    License.belongsTo(models.LicenseStatusLookup, { foreignKey: 'licenseStatusId' });
-  //    License.belongsTo(models.LicenseTypeLookup, { foreignKey: 'typeId' });
-  //    License.belongsTo(models.Server, { foreignKey: 'serverId' });
-  //    License.hasMany(models.POLicenseJoin, { foreignKey: 'licenseId' });
-  // }
+  // Define static associate method
+  public static associate(models: any) {
+    License.belongsTo(models.LicenseTypeLookup, { foreignKey: 'typeId', as: 'type' });
+    // License.belongsTo(models.Server, { foreignKey: 'serverId', as: 'server' }); // Removed, association handled in db.ts
+    License.belongsToMany(models.PurchaseOrder, {
+      through: models.POLicenseJoin, // Use models.POLicenseJoin
+      foreignKey: 'licenseId',
+      otherKey: 'poId', // Corrected based on typical join table naming for PurchaseOrder's ID
+      as: 'purchaseOrders'
+    });
+  }
 }
 
 export default License;

@@ -5,7 +5,6 @@ import { sequelize } from '@/lib/db'; // Import the connection instance from db.
 import Administrator from './administrator';
 import Customer from './customer';
 import License from './license';
-import LicenseActionLookup from './licenseActionLookup';
 import LicenseLedger from './licenseLedger';
 import LicenseTypeLookup from './licenseTypeLookup';
 import POLicenseJoin from './poLicenseJoin';
@@ -32,10 +31,6 @@ License.hasMany(LicenseLedger, { foreignKey: 'licenseId', as: 'ledgerEntries' })
 // LicenseTypeLookup associations
 LicenseTypeLookup.hasMany(License, { foreignKey: 'typeId', as: 'licensesOfType' }); // Changed alias
 // License.belongsTo(LicenseTypeLookup, ...) is defined in license.ts
-
-// LicenseActionLookup associations
-LicenseActionLookup.hasMany(LicenseLedger, { foreignKey: 'licenseActionId', as: 'ledgerEntries' });
-// LicenseLedger.belongsTo(LicenseActionLookup, ...) is defined in licenseLedger.ts
 
 // Server associations
 Server.hasMany(LicenseLedger, { foreignKey: 'serverId', as: 'ledgerEntries' });
@@ -67,7 +62,6 @@ const db = {
   Administrator,
   Customer,
   License,
-  LicenseActionLookup,
   LicenseLedger,
   LicenseTypeLookup,
   POLicenseJoin,
