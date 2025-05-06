@@ -170,4 +170,5 @@ export interface LicenseInput {
     poId: string; // Purchase Order ID
     typeId: number;
     duration: number;
+    externalName?: string | null; // Added externalName as optional
 }

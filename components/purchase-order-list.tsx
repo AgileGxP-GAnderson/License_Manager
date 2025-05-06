@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"; // Added Input import
 import { useServerStore } from "@/lib/stores/serverStore"
 import { usePurchaseOrderStore } from "@/lib/stores/purchaseOrderStore"
 import { useLicenseStore } from "@/lib/stores/licenseStore"
@@ -46,13 +47,14 @@ const perpetualDurationValue = 100;
 
 interface AddLicenseFormProps {
     poId: string;
-    onSave: (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration'>) => Promise<void>;
+    onSave: (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration' | 'externalName'>) => Promise<void>;
     onCancel: () => void;
 }
 
 const AddLicenseForm: React.FC<AddLicenseFormProps> = ({ poId, onSave, onCancel }) => {
     const [licenseTypeId, setLicenseTypeId] = useState<string>("");
     const [duration, setDuration] = useState<number | null>(null);
+    const [externalName, setExternalName] = useState<string>(""); // New state for description
     const [isDurationDisabled, setIsDurationDisabled] = useState<boolean>(true);
     const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -80,6 +82,7 @@ const AddLicenseForm: React.FC<AddLicenseFormProps> = ({ poId, onSave, onCancel 
             poId: poId,
             typeId: typeIdNum,
             duration: duration,
+            externalName: externalName, // Add externalName to the data
         };
 
         setIsSaving(true);
@@ -110,6 +113,19 @@ const AddLicenseForm: React.FC<AddLicenseFormProps> = ({ poId, onSave, onCancel 
                         ))}
                     </SelectContent>
                 </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="externalName" className="text-right">
+                    Description
+                </Label>
+                <Input
+                    id="externalName"
+                    value={externalName}
+                    onChange={(e) => setExternalName(e.target.value)}
+                    className="col-span-3"
+                    placeholder="Optional license description"
+                    disabled={isSaving}
+                />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
                  <Label htmlFor="duration" className="text-right">
@@ -198,7 +214,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
     setCurrentPoIdForModal(null);
   };
 
-  const handleSaveLicense = async (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration'>): Promise<void> => {
+  const handleSaveLicense = async (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration' | 'externalName'>): Promise<void> => {
     console.log("Saving license:", licenseData);
     try {
       const addedLicense = await addLicenseToPurchaseOrder(licenseData);
@@ -316,6 +332,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                        <TableHeader>
                         <TableRow>
                           <TableHead>License Type</TableHead>
+                          <TableHead>Description</TableHead> {/* New Column for Description */}
                           <TableHead>Status</TableHead>
                           <TableHead>Duration</TableHead>
                           <TableHead>Last Activity Date</TableHead>
@@ -329,6 +346,7 @@ const PurchaseOrderList: React.FC<PurchaseOrderListProps> = ({
                         {po.licenses.map((license, index) => (
                           <TableRow key={license.id || index}>
                             <TableCell>{license.type?.name ?? getLicenseTypeText(license.typeId)}</TableCell>
+                            <TableCell>{license.externalName}</TableCell> {/* Display externalName */}
                             <TableCell>
                               <Badge
                                 variant={

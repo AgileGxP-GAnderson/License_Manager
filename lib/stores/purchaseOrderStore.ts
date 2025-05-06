@@ -13,7 +13,7 @@ interface PurchaseOrderStoreState {
   deletePurchaseOrder: (poId: string) => Promise<boolean>;
   
   // License operations within POs
-  addLicenseToPurchaseOrder: (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration'>) => Promise<boolean>;
+  addLicenseToPurchaseOrder: (licenseData: Pick<LicenseInput, 'poId' | 'typeId' | 'duration' | 'externalName'>) => Promise<boolean>;
   
   // Helper functions
   setPurchaseOrders: (purchaseOrders: PurchaseOrder[]) => void;
@@ -147,6 +147,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderStoreState>()(
           body: JSON.stringify({
             typeId: licenseData.typeId,
             duration: licenseData.duration,
+            externalName: licenseData.externalName, // Add externalName to payload
           }),
         });
 

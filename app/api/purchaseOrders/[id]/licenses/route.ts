@@ -8,6 +8,7 @@ import { License as LicenseType } from '@/lib/types'; // Assuming this type is j
 const licenseBodySchema = z.object({
     typeId: z.number().int(),
     duration: z.number().int(),
+    externalName: z.string().optional(), // Make externalName optional
 });
 
 // Define the expected params structure
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
             return NextResponse.json({ message: 'Invalid input data', errors: validation.error.errors }, { status: 400 });
         }
 
-        const { typeId, duration } = validation.data;
+        const { typeId, duration, externalName } = validation.data;
 
         // Verify Purchase Order exists within the transaction
         const purchaseOrder = await db.PurchaseOrder.findByPk(purchaseOrderId, { transaction });
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         // Create the new License
         const newLicense = await db.License.create({
             uniqueId: uuidv4(), // Generate a unique ID for the license
-            externalName: `License for PO ${purchaseOrder.poName}`, // Example name, adjust as needed
+            externalName: externalName || `License for PO ${purchaseOrder.poName}`, // Use provided externalName or default
             typeId: typeId,
             status: 'Available', // Initial status
             // activationDate, expirationDate, serverId will be null initially
