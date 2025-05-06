@@ -24,7 +24,6 @@ import {
 // No longer need to import db here for initialization
 import LicenseTypeLookup, { LicenseTypeLookupOutput } from './licenseTypeLookup';
 import PurchaseOrder from './purchaseOrder'; // Import PurchaseOrder for BelongsToMany association
-// import LicenseLedger from './licenseLedger'; // Import LicenseLedger for HasMany association
 import LicenseAudit from './licenseAudit'; // Import LicenseAudit model
 // import Server from './server'; // Removed import, association handled in db.ts
 
@@ -79,19 +78,6 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
   public removePurchaseOrders!: BelongsToManyRemoveAssociationMixin<PurchaseOrder, number[]>;
   public setPurchaseOrders!: BelongsToManySetAssociationsMixin<PurchaseOrder, number[]>;
   public readonly purchaseOrders?: PurchaseOrder[];
-
-  // HasMany association mixins for LicenseLedgers
-  public addLedgerEntry!: HasManyAddAssociationMixin<LicenseLedger, number>;
-  public addLedgerEntries!: HasManyAddAssociationsMixin<LicenseLedger, number>;
-  public countLedgerEntries!: HasManyCountAssociationsMixin;
-  public createLedgerEntry!: HasManyCreateAssociationMixin<LicenseLedger>;
-  public getLedgerEntries!: HasManyGetAssociationsMixin<LicenseLedger>;
-  public hasLedgerEntry!: HasManyHasAssociationMixin<LicenseLedger, number>;
-  public hasLedgerEntries!: HasManyHasAssociationsMixin<LicenseLedger, number>;
-  public removeLedgerEntry!: HasManyRemoveAssociationMixin<LicenseLedger, number>;
-  public removeLedgerEntries!: HasManyRemoveAssociationsMixin<LicenseLedger, number>;
-  public setLedgerEntries!: HasManySetAssociationsMixin<LicenseLedger, number>;
-  // public readonly ledgerEntries?: LicenseLedger[]; // Removed
 
   // Define static init method
   public static initialize(sequelize: Sequelize) {

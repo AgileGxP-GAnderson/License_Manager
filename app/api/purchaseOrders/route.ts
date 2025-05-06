@@ -135,27 +135,34 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
-    // console.log('[API_PURCHASE_ORDERS_POST] Request body:', request.body); // Log the request body for debugging - Note: request.body is a stream, use request.json()
-    const body: PurchaseOrderInput = await request.json();
-    // Use the actual fields from your PurchaseOrderInput/Model
-    // Assuming fields like 'purchaseOrderNumber', 'purchaseOrderDate' based on previous suggestions
-    // Adjust these based on your actual model definition in purchaseOrder.ts
-    const { poName, purchaseDate, customerId, /* other fields like notes, isClosed etc. */ } = body;
+    const rawBody = await request.json();
+
+    // Ensure the body conforms to PurchaseOrderInput, especially for required fields and their types
+    const processedBody: PurchaseOrderInput = {
+      ...rawBody, // Spread rawBody to include any other fields passed by client
+      poName: rawBody.poName,
+      purchaseDate: new Date(rawBody.purchaseDate), // Convert string to Date object
+      customerId: Number(rawBody.customerId),       // Convert string/any to number
+      // Default isClosed to false if null or undefined, otherwise use the boolean value from request
+      isClosed: (rawBody.isClosed === undefined || rawBody.isClosed === null) ? false : Boolean(rawBody.isClosed),
+    };
 
     // Basic validation - adjust field names as per your model
-    if (!poName || !purchaseDate || customerId === undefined /* add other required fields */) {
-      return new NextResponse('Missing required fields (e.g., purchaseOrderNumber, purchaseOrderDate, customerId)', { status: 400 });
+    if (!processedBody.poName || !processedBody.purchaseDate || isNaN(processedBody.customerId)) {
+      // Check if purchaseDate became an invalid date
+      if (isNaN(processedBody.purchaseDate.getTime())) {
+        return new NextResponse('Invalid or missing purchaseDate', { status: 400 });
+      }
+      return new NextResponse('Missing required fields (e.g., poName, purchaseDate, customerId)', { status: 400 });
     }
 
     // Validate customerId existence
-    const customerExists = await db.Customer.findByPk(customerId);
+    const customerExists = await db.Customer.findByPk(processedBody.customerId);
     if (!customerExists) {
-      return new NextResponse(`Customer with ID ${customerId} not found.`, { status: 400 });
+      return new NextResponse(`Customer with ID ${processedBody.customerId} not found.`, { status: 400 });
     }
 
-    // Note: Handling associated licenses would require additional logic here if creating them simultaneously
-
-    const newPurchaseOrder = await db.PurchaseOrder.create(body);
+    const newPurchaseOrder = await db.PurchaseOrder.create(processedBody);
     // Fetch again to include customer data in response
     const result = await db.PurchaseOrder.findByPk(newPurchaseOrder.id, {
       include: [{ model: Customer, as: 'customer' }]

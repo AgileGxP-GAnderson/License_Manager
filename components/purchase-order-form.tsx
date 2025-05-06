@@ -60,7 +60,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       ...values,
       customerId: customerId, // Ensure customerId is included
       purchaseDate: new Date(values.purchaseDate).toISOString(), // Convert back to ISO string
-      // isClosed: values.isClosed ?? false, // Handle optional fields
+      isClosed: values.isClosed ?? false, // Ensure isClosed is provided, defaulting to false for new POs
     };
 
     try {
