@@ -22,7 +22,7 @@ const formSchema = z.object({
   login: z.string().min(1, "Username/Login is required"),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   // Add password only for creation, make it optional for editing schema if needed
-  password: z.string().min(6, "Password must be at least 6 characters").optional(), // Optional for schema, required conditionally in UI/logic
+  passwordEncrypted: z.string().min(6, "Password must be at least 6 characters").optional(), // Changed from password
   // --- Add isActive field ---
   isActive: z.boolean().default(true), // Default to true
 });
@@ -48,7 +48,7 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
     lastName: initialData?.lastName ?? "",
     login: initialData?.login ?? "",
     email: initialData?.email ?? "",
-    password: "", // Always clear password field on load
+    passwordEncrypted: "", // Changed from password, Always clear password field on load
     isActive: initialData?.isActive ?? true, // Default to true if adding new
   };
   // --- End explicit definition ---
@@ -68,7 +68,7 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
         lastName: initialData.lastName ?? "",
         login: initialData.login ?? "",
         email: initialData.email ?? "",
-        password: "", // Don't repopulate password
+        passwordEncrypted: "", // Changed from password, Don't repopulate password
         isActive: initialData.isActive ?? true,
       });
     } else {
@@ -77,7 +77,7 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
         lastName: "",
         login: "",
         email: "",
-        password: "",
+        passwordEncrypted: "", // Changed from password
         isActive: true, // Explicitly true for new user
       });
     }
@@ -97,7 +97,7 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
 
     // --- Prepare data for store action ---
     // The store action now handles getting customerId for adding
-    const userData: CreateUserInput & { password?: string } = {
+    const userData: CreateUserInput & { passwordEncrypted?: string } = { // Changed from password
         firstName: data.firstName,
         lastName: data.lastName,
         login: data.login,
@@ -105,7 +105,7 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
         isActive: data.isActive, // Include isActive from form
         customerId: customerId, // Use customerId from props
         // Conditionally add password only when creating
-        ...( !isEditing && data.password && { password: data.password } ),
+        ...( !isEditing && data.passwordEncrypted && { passwordEncrypted: data.passwordEncrypted } ), // Changed from password
         // customerId is now handled within the store's addUser action
     };
 
@@ -113,13 +113,13 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
       if (isEditing && initialData) {
         // Ensure password isn't accidentally sent during update unless intended
         const updateData = { ...userData };
-        delete updateData.password; // Remove password field for standard updates
+        delete updateData.passwordEncrypted; // Changed from password, Remove password field for standard updates
         resultUser = await updateUser(initialData.id, updateData);
         toast({ title: "Success", description: "User updated successfully." });
       } else {
         // Validate password presence for new user
-        if (!data.password) {
-            form.setError("password", { type: "manual", message: "Password is required for new users." });
+        if (!data.passwordEncrypted) { // Changed from password
+            form.setError("passwordEncrypted", { type: "manual", message: "Password is required for new users." }); // Changed from password
             setIsSubmitting(false);
             return;
         }
@@ -193,7 +193,7 @@ export default function UserForm({ initialData, customerId, onCancel, onSuccess 
         {!isEditing && (
           <FormField
             control={form.control}
-            name="password"
+            name="passwordEncrypted" // Changed from password
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Password *</FormLabel>

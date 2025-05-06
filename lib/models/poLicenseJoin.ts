@@ -41,7 +41,7 @@ class POLicenseJoin extends Model<POLicenseJoinAttributes, POLicenseJoinInput> i
   public static initialize(sequelize: Sequelize) {
       POLicenseJoin.init({
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.BIGINT,
           autoIncrement: true,
           primaryKey: true,
         },

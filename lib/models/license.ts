@@ -96,7 +96,7 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
   public static initialize(sequelize: Sequelize) {
       License.init({
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.BIGINT,
           autoIncrement: true,
           primaryKey: true,
         },

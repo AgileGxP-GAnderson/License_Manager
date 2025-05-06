@@ -10,7 +10,7 @@ interface UserInput {
     lastName: string;
     login: string;
     email: string;
-    password: string; // Expect plain password
+    passwordEncrypted: string; // Changed from password to passwordEncrypted
     isActive: boolean;
 }
 
@@ -45,17 +45,14 @@ export async function POST(request: NextRequest) {
         const body: UserInput = await request.json();
         console.log('Received body:', body);
 
-        // --- UPDATE Destructuring: Expect 'password' ---
-        const { customerId, firstName, lastName, login, email, password, isActive } = body;
+        const { customerId, firstName, lastName, login, email, passwordEncrypted, isActive } = body; // Changed from password
 
-        // --- UPDATE Validation: Check for 'password' ---
         console.log('API pre-validation');
-        // Ensure customerId is treated as a number if your DB expects it
         const customerIdNum = parseInt(customerId, 10);
-        if (isNaN(customerIdNum) || !firstName || !lastName || !login || !email || !password || isActive === undefined) {
-            console.error('Validation failed: Missing fields', { customerId, customerIdNum, firstName, lastName, login, email, password_present: !!password, isActive });
-            // Be more specific in error message if possible
-            return new NextResponse('Missing required user fields (customerId, firstName, lastName, login, email, password, isActive)', { status: 400 });
+        // Validating passwordEncrypted instead of password
+        if (isNaN(customerIdNum) || !firstName || !lastName || !login || !email || !passwordEncrypted || isActive === undefined) {
+            console.error('Validation failed: Missing fields', { customerId, customerIdNum, firstName, lastName, login, email, password_present: !!passwordEncrypted, isActive }); // Logging based on passwordEncrypted
+            return new NextResponse('Missing required user fields (customerId, firstName, lastName, login, email, passwordEncrypted, isActive)', { status: 400 });
         }
         console.log('API post-validation');
 
@@ -80,29 +77,24 @@ export async function POST(request: NextRequest) {
 
         // --- ADD Password Hashing ---
         console.log('Hashing password...');
-        const hashedPassword = await bcrypt.hash(password, 10); // Hash the plain password (salt rounds = 10)
+        const hashedPassword = await bcrypt.hash(passwordEncrypted, 10); // Hashing passwordEncrypted
         console.log('Password hashed');
 
-        // --- UPDATE Create Data: Use 'hashedPassword' and correct DB field name ---
-        // Ensure the field name matches your Sequelize model definition (e.g., 'password' or 'passwordHash')
         const createData = {
-            customerId: customerIdNum, // Use the parsed number
+            customerId: customerIdNum,
             firstName,
             lastName,
             login,
             email,
-            password: hashedPassword, // <-- Store the HASHED password in the correct DB field
+            passwordEncrypted: hashedPassword, // Storing hashed password in passwordEncrypted field
             isActive,
         };
-        console.log('Prepared createData (password omitted):', { ...createData, password: '*** HASHED ***'});
+        console.log('Prepared createData (password omitted):', { ...createData, passwordEncrypted: '*** HASHED ***'}); // Logging passwordEncrypted
 
-        // --- Create user in DB ---
         const newUser = await db.User.create(createData);
-        console.log('User created in DB:', newUser.toJSON()); // Log created user
+        console.log('User created in DB:', newUser.toJSON());
 
-        // --- Return the created user (excluding password) ---
-        // Rename 'password' from the DB object to avoid redeclaration
-        const { password: _, ...userWithoutPassword } = newUser.toJSON(); // Use '_' or another name like 'dbPassword'
+        const { passwordEncrypted: _, ...userWithoutPassword } = newUser.toJSON(); // Destructuring passwordEncrypted
         return NextResponse.json(userWithoutPassword, { status: 201 });
 
     } catch (error: any) {

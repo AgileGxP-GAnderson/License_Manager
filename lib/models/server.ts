@@ -42,7 +42,7 @@ class Server extends Model<ServerAttributes, ServerInput> implements ServerAttri
   public static initialize(sequelize: Sequelize) {
       Server.init({
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.BIGINT,
           autoIncrement: true,
           primaryKey: true,
         },

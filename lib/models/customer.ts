@@ -50,7 +50,7 @@ class Customer extends Model<CustomerAttributes, CustomerInput> implements Custo
   public static initialize(sequelize: Sequelize) {
       Customer.init({
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.BIGINT,
           autoIncrement: true,
           primaryKey: true,
         },

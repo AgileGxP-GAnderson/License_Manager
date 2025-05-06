@@ -37,7 +37,7 @@ class Administrator extends Model<AdministratorAttributes, AdministratorInput> i
   public static initialize(sequelize: Sequelize) {
       Administrator.init({
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.BIGINT,
           autoIncrement: true,
           primaryKey: true,
         },

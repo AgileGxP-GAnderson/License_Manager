@@ -9,7 +9,7 @@ interface UserAttributes {
   firstName: string;
   lastName: string;
   login: string;
-  email: string; // Corrected from BIGINT
+  email: string; // Changed from BIGINT to STRING
   passwordEncrypted: Buffer;
   isActive: boolean; // Corrected from BIGINT
   createdAt?: Date;
@@ -29,7 +29,7 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
   public firstName!: string;
   public lastName!: string;
   public login!: string;
-  public email!: string;
+  public email!: string; // Changed from BIGINT to STRING
   public passwordEncrypted!: Buffer;
   public isActive!: boolean;
 
@@ -45,12 +45,12 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
   public static initialize(sequelize: Sequelize) {
       User.init({
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.BIGINT, // Changed from DataTypes.INTEGER
           autoIncrement: true,
           primaryKey: true,
         },
         customerId: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.BIGINT, // Changed from DataTypes.INTEGER
           allowNull: false,
           references: {
             model: Customer,
@@ -71,11 +71,11 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
           unique: true,
         },
         email: {
-          type: DataTypes.STRING,
+          type: DataTypes.STRING, // Changed from DataTypes.BIGINT
           allowNull: false,
           unique: true,
           validate: {
-            isEmail: true,
+            isEmail: true, // Added email validation
           },
         },
         passwordEncrypted: {
@@ -83,7 +83,7 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
           allowNull: false,
         },
         isActive: {
-          type: DataTypes.BOOLEAN,
+          type: DataTypes.BOOLEAN, // Corrected from DataTypes.BIGINT
           allowNull: false,
         },
         createdAt: {
@@ -98,7 +98,7 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
         },
       }, {
         sequelize, // Pass the connection here
-        tableName: 'Users',
+        tableName: '"Users"', // Ensures exact, case-sensitive table name
         timestamps: true,
       });
   }

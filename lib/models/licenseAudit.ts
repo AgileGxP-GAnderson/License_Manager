@@ -34,8 +34,8 @@ class LicenseAudit extends Model<LicenseAuditAttributes, LicenseAuditInput> impl
   public static initialize(sequelize: Sequelize) {
     LicenseAudit.init({
       auditId: {
-        type: DataTypes.INTEGER, // Schema uses BIGINT, using INTEGER for consistency with other PKs
-        autoIncrement: true, // Assuming auditId is auto-incrementing
+        type: DataTypes.BIGINT,
+        autoIncrement: true,
         primaryKey: true,
       },
       licenseIdRef: {

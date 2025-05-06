@@ -22,7 +22,7 @@ class LicenseTypeLookup extends Model<LicenseTypeLookupAttributes, LicenseTypeLo
   public static initialize(sequelize: Sequelize) {
     LicenseTypeLookup.init({
       id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true,
       },

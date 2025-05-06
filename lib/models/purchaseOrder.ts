@@ -66,7 +66,7 @@ class PurchaseOrder extends Model<PurchaseOrderAttributes, PurchaseOrderInput> i
   public static initialize(sequelize: Sequelize) {
       PurchaseOrder.init({
         id: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.BIGINT,
           autoIncrement: true,
           primaryKey: true,
         },
