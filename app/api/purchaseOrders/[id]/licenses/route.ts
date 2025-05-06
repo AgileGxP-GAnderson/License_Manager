@@ -63,17 +63,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
             duration: duration,
         }, { transaction });
 
-        // --- Create the initial LicenseLedger entry ---
-        await db.LicenseLedger.create({
-            licenseId: newLicense.id,
-            serverId: undefined, // Explicitly null
-            activityDate: new Date(), // Current date/time
-            licenseActionId: 1, // Assuming 1 = 'Created' or similar initial action
-            comment: null, // Explicitly null
-            expirationDate: undefined, // Explicitly null
-        }, { transaction });
-        // --- End LicenseLedger creation ---
-
         // Commit the transaction
         await transaction.commit();
 

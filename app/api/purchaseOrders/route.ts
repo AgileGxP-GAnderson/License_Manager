@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
             'uniqueId',
             'externalName',
             'typeId',
+            'licenseStatusId', // +++ Added licenseStatusId
             // Calculate total duration using the join table alias
             // Note: This SUM might be complex with nested includes, consider calculating on frontend if issues arise
             // Or fetch duration directly from the join table attributes below
@@ -96,12 +97,19 @@ export async function GET(request: NextRequest) {
             // Get the latest ledger entry (if it exists)
             const latestLedgerEntry = license.ledgerEntries?.[0];
 
-            // Determine status based on latest action (optional, can also do on UI)
-            let status = 'Unknown'; // Default status after removing LicenseActionLookup logic
-            // You may need to implement new logic here to determine status based on License fields
-            // For example, if License has a direct status field or serverId determines activation:
-            if (license.serverId) status = 'Activated';
-            else status = 'Available'; // Simplified example
+            // Determine status based on licenseStatusId
+            let status = 'Unknown';
+            switch (license.licenseStatusId) {
+              case 1:
+                status = 'Available';
+                break;
+              case 2:
+                status = 'Activated';
+                break;
+              case 3:
+                status = 'Deactivated';
+                break;
+            }
 
             return {
                 ...license,

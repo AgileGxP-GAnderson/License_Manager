@@ -100,6 +100,7 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
         licenseStatusId: {
           type: DataTypes.INTEGER,
           allowNull: false,
+          defaultValue: 1, // Default to 'Available'
           references: {
             model: 'LicenseStatusLookup', // Changed from model class to table name string
             key: 'id',
