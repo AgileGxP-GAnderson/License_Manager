@@ -82,7 +82,7 @@ class PurchaseOrder extends Model<PurchaseOrderAttributes, PurchaseOrderInput> i
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
-            model: Customer,
+            model: 'Customers', // Name of the target table
             key: 'id',
           },
         },

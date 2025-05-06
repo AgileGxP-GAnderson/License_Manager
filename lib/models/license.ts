@@ -1,5 +1,5 @@
 import {
-  DataTypes, Model, Optional, Sequelize, // Import Sequelize type
+  DataTypes, Model, Optional, Sequelize,
   BelongsToGetAssociationMixin,
   BelongsToManyAddAssociationMixin,
   BelongsToManyGetAssociationsMixin,
@@ -19,24 +19,30 @@ import {
   HasManyRemoveAssociationMixin,
   HasManyRemoveAssociationsMixin,
   HasManySetAssociationsMixin,
+  InstanceUpdateOptions // Import InstanceUpdateOptions for hook options type
 } from 'sequelize';
 // No longer need to import db here for initialization
 import LicenseTypeLookup, { LicenseTypeLookupOutput } from './licenseTypeLookup';
 import PurchaseOrder from './purchaseOrder'; // Import PurchaseOrder for BelongsToMany association
 import LicenseLedger from './licenseLedger'; // Import LicenseLedger for HasMany association
+import LicenseAudit from './licenseAudit'; // Import LicenseAudit model
 
 // Interface for License attributes
 interface LicenseAttributes {
   id: number;
   uniqueId: string; // UUID
-  externalName: string; // Corrected from BIGINT
+  externalName?: string | null;
+  licenseStatusId: number;
   typeId: number;
+  comment?: string | null;
+  serverId?: number | null;
+  updatedBy?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 // Interface for License creation attributes
-export interface LicenseInput extends Optional<LicenseAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+export interface LicenseInput extends Optional<LicenseAttributes, 'id' | 'externalName' | 'comment' | 'serverId' | 'updatedBy' | 'createdAt' | 'updatedAt'> {}
 
 // Interface for License output attributes
 export interface LicenseOutput extends Required<LicenseAttributes> {}
@@ -45,8 +51,12 @@ export interface LicenseOutput extends Required<LicenseAttributes> {}
 class License extends Model<LicenseAttributes, LicenseInput> implements LicenseAttributes {
   public id!: number;
   public uniqueId!: string;
-  public externalName!: string;
+  public externalName!: string | null;
+  public licenseStatusId!: number;
   public typeId!: number;
+  public comment!: string | null;
+  public serverId!: number | null;
+  public updatedBy!: string | null;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -78,7 +88,7 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
   public hasLedgerEntry!: HasManyHasAssociationMixin<LicenseLedger, number>;
   public hasLedgerEntries!: HasManyHasAssociationsMixin<LicenseLedger, number>;
   public removeLedgerEntry!: HasManyRemoveAssociationMixin<LicenseLedger, number>;
-  public removeLedgerEntries!: HasManyRemoveAssociationMixin<LicenseLedger, number>;
+  public removeLedgerEntries!: HasManyRemoveAssociationsMixin<LicenseLedger, number>;
   public setLedgerEntries!: HasManySetAssociationsMixin<LicenseLedger, number>;
   public readonly ledgerEntries?: LicenseLedger[];
 
@@ -98,15 +108,39 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
         },
         externalName: {
           type: DataTypes.STRING,
+          allowNull: true,
+        },
+        licenseStatusId: {
+          type: DataTypes.INTEGER,
           allowNull: false,
+          references: {
+            model: 'LicenseStatusLookup',
+            key: 'id',
+          },
         },
         typeId: {
           type: DataTypes.INTEGER,
           allowNull: false,
           references: {
-            model: LicenseTypeLookup,
+            model: 'LicenseTypeLookup',
             key: 'id',
           },
+        },
+        comment: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+        serverId: {
+          type: DataTypes.INTEGER,
+          allowNull: true,
+          references: {
+            model: 'Servers',
+            key: 'id',
+          },
+        },
+        updatedBy: {
+          type: DataTypes.STRING,
+          allowNull: true,
         },
         createdAt: {
           type: DataTypes.DATE,
@@ -122,14 +156,33 @@ class License extends Model<LicenseAttributes, LicenseInput> implements LicenseA
         sequelize, // Pass the connection here
         tableName: 'Licenses',
         timestamps: true,
+        hooks: {
+          afterUpdate: async (instance: License, options: InstanceUpdateOptions) => {
+            try {
+              await LicenseAudit.create({
+                licenseIdRef: instance.id,
+                uniqueId: instance.uniqueId,
+                externalName: instance.externalName,
+                licenseStatusId: instance.licenseStatusId,
+                typeId: instance.typeId,
+                comment: instance.comment,
+                serverId: instance.serverId,
+                updatedBy: instance.updatedBy,
+              }, { transaction: options.transaction });
+            } catch (error) {
+              console.error('Failed to create LicenseAudit record:', error);
+            }
+          }
+        }
       });
   }
 
   // Define static associate method if needed
   // public static associate(models: any) {
-  //    License.belongsTo(models.LicenseTypeLookup, { foreignKey: 'typeId', as: 'type' });
-  //    License.belongsToMany(models.PurchaseOrder, { through: models.POLicenseJoin, foreignKey: 'licenseId', otherKey: 'poId', as: 'purchaseOrders' });
-  //    License.hasMany(models.LicenseLedger, { foreignKey: 'licenseId', as: 'ledgerEntries' });
+  //    License.belongsTo(models.LicenseStatusLookup, { foreignKey: 'licenseStatusId' });
+  //    License.belongsTo(models.LicenseTypeLookup, { foreignKey: 'typeId' });
+  //    License.belongsTo(models.Server, { foreignKey: 'serverId' });
+  //    License.hasMany(models.POLicenseJoin, { foreignKey: 'licenseId' });
   // }
 }
 

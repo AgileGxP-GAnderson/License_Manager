@@ -98,13 +98,18 @@ export const useUserStore = create<UserState>((set) => ({
         users: [...state.users, newUser],
         loading: false,
       }));
-    } catch (error) {
-      let errorMessage = 'An unknown error occurred while creating the user.';
-      if (error instanceof Error) {
-        errorMessage = error.message;
+    } catch (err: unknown) { // Changed variable name from error to err
+      let extractedMessage = 'An unknown error occurred while creating the user.';
+      const errorDetails = err; // Store original error object
+
+      if (err instanceof Error) {
+        extractedMessage = err.message;
+      } else if (typeof err === 'string') {
+        extractedMessage = err; // Handle if error is a string
       }
-      console.error('Error creating user:', errorMessage, error);
-      set({ error: errorMessage, loading: false });
+      // Refined console.error call
+      console.error(`Error creating user: ${extractedMessage}`, errorDetails);
+      set({ error: extractedMessage, loading: false });
     }
   },
 

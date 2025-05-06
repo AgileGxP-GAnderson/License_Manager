@@ -10,7 +10,7 @@ interface UserAttributes {
   lastName: string;
   login: string;
   email: string; // Corrected from BIGINT
-  password: string; // Changed from Buffer to string for bcrypt hash
+  passwordEncrypted: Buffer;
   isActive: boolean; // Corrected from BIGINT
   createdAt?: Date;
   updatedAt?: Date;
@@ -30,7 +30,7 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
   public lastName!: string;
   public login!: string;
   public email!: string;
-  public password!: string;
+  public passwordEncrypted!: Buffer;
   public isActive!: boolean;
 
   // Timestamps
@@ -78,8 +78,8 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
             isEmail: true,
           },
         },
-        password: {
-          type: DataTypes.STRING, // Ensure this is STRING or TEXT
+        passwordEncrypted: {
+          type: DataTypes.BLOB,
           allowNull: false,
         },
         isActive: {
