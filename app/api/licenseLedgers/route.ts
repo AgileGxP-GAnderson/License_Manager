@@ -1,18 +1,18 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getDbInstance } from '@/lib/db'; // Use the lazy initialization function
-import { LicenseLedgerInput } from '@/lib/models/licenseLedger'; // Import input type
-import License from '@/lib/models/license'; // Import for association include & validation
-import Server from '@/lib/models/server'; // Import for association include & validation
-import LicenseActionLookup from '@/lib/models/licenseActionLookup'; // Import for association include & validation
+import { getDbInstance } from '@/lib/db'; 
+import { LicenseLedgerInput } from '@/lib/models/licenseLedger'; 
+// import License from '@/lib/models/license'; // Remove direct import
+// import Server from '@/lib/models/server'; // Remove direct import
+// import LicenseActionLookup from '@/lib/models/licenseActionLookup'; // Remove direct import
 
 export async function GET(request: NextRequest) {
-  const db = getDbInstance(); // Get DB instance inside the handler
+  const db = getDbInstance(); 
   try {
     const ledgerEntries = await db.LicenseLedger.findAll({
         include: [
-            { model: License, as: 'license' },
-            { model: Server, as: 'server' },
-            { model: LicenseActionLookup, as: 'licenseAction' }
+            { model: db.License, as: 'license' }, // Changed to db.License
+            { model: db.Server, as: 'server' }, // Changed to db.Server
+            { model: db.LicenseActionLookup, as: 'licenseAction' } // Changed to db.LicenseActionLookup
         ]
     });
     return NextResponse.json(ledgerEntries);
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    const db = getDbInstance(); // Get DB instance inside the handler
+    const db = getDbInstance(); 
     try {
         const body: LicenseLedgerInput = await request.json();
         const { licenseId, serverId, activityDate, licenseActionId, expirationDate } = body;
@@ -32,21 +32,21 @@ export async function POST(request: NextRequest) {
             return new NextResponse('Missing required fields (licenseId, serverId, activityDate, licenseActionId, expirationDate)', { status: 400 });
         }
 
-        const licenseExists = await db.License.findByPk(licenseId);
+        const licenseExists = await db.License.findByPk(licenseId); // No change needed
         if (!licenseExists) return new NextResponse(`License with ID ${licenseId} not found.`, { status: 400 });
 
-        const serverExists = await db.Server.findByPk(serverId);
+        const serverExists = await db.Server.findByPk(serverId); // No change needed
         if (!serverExists) return new NextResponse(`Server with ID ${serverId} not found.`, { status: 400 });
 
-        const actionExists = await db.LicenseActionLookup.findByPk(licenseActionId);
+        const actionExists = await db.LicenseActionLookup.findByPk(licenseActionId); // No change needed
         if (!actionExists) return new NextResponse(`LicenseActionLookup with ID ${licenseActionId} not found.`, { status: 400 });
 
         const newLedgerEntry = await db.LicenseLedger.create(body);
         const result = await db.LicenseLedger.findByPk(newLedgerEntry.id, {
              include: [
-                { model: License, as: 'license' },
-                { model: Server, as: 'server' },
-                { model: LicenseActionLookup, as: 'licenseAction' }
+                { model: db.License, as: 'license' }, // Changed to db.License
+                { model: db.Server, as: 'server' }, // Changed to db.Server
+                { model: db.LicenseActionLookup, as: 'licenseAction' } // Changed to db.LicenseActionLookup
             ]
         });
         return NextResponse.json(result, { status: 201 });

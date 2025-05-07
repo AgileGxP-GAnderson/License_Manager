@@ -15,23 +15,39 @@ interface UserInput {
 
 export async function GET(request: NextRequest) {
   const db = getDbInstance();
-  try {
-    const users = await db.User.findAll({
-        include: [{ model: Customer, as: 'customer' }] // Include customer data
-    });
+  const { searchParams } = request.nextUrl; // Use request.nextUrl for searchParams
+  const customerId = searchParams.get('customerId');
 
-    const safeUsers = users.map((user: any) => { // Use 'any' or define a proper DB model type
-        const { password, ...rest } = user.toJSON(); // Assuming your DB field is password
-        return rest;
+  try {
+    const findOptions: any = { // Consider defining a more specific Sequelize FindOptions type
+      include: [{ model: db.Customer, as: 'customer' }] // Restored include and ensured db.Customer is used
+    };
+
+    if (customerId) {
+      const customerIdNum = parseInt(customerId, 10);
+      if (isNaN(customerIdNum)) {
+        console.error('[API_USERS_GET] Invalid customerId format:', customerId);
+        return new NextResponse('Invalid customerId format', { status: 400 });
+      }
+      findOptions.where = { customerId: customerIdNum };
+    } else {
+      // Handle fetching all users if customerId is not provided, or return an error/empty array
+      // For now, it fetches all users if no customerId is present.
+    }
+
+    const users = await db.User.findAll(findOptions);
+
+    const safeUsers = users.map((userInstance: any) => {
+      const { passwordEncrypted, ...rest } = userInstance.toJSON();
+      return rest;
     });
 
     return NextResponse.json(safeUsers);
   } catch (error) {
-    console.error('[API_USERS_GET]', error);
+    console.error('[API_USERS_GET] Error fetching users. CustomerId:', customerId, 'Error:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
-
 
 export async function POST(request: NextRequest) {
     console.log('API Hit POST /api/users');

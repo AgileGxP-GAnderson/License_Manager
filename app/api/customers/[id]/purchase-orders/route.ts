@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbInstance } from '@/lib/db'; // Adjust path as needed
-import PurchaseOrder from '@/lib/models/purchaseOrder'; // Import Customer model for validation
-import License from '@/lib/models/license'; // Import User model
+// import PurchaseOrder from '@/lib/models/purchaseOrder'; // Remove direct import
+// import License from '@/lib/models/license'; // Remove direct import
 
 export async function GET(
   request: NextRequest,
@@ -16,11 +16,11 @@ export async function GET(
       return NextResponse.json({ message: 'Invalid customer ID format' }, { status: 400 });
     }
 
-    const purchaseOrders = await PurchaseOrder.findAll({
+    const purchaseOrders = await db.PurchaseOrder.findAll({ // Changed to db.PurchaseOrder
       where: { customerId: customerId },
       include: [
         {
-          model: License,
+          model: db.License, // Changed to db.License
           as: 'licenses', // Make sure 'as' matches your model association definition
         },
       ],

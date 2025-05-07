@@ -1,4 +1,4 @@
-import { Sequelize, Dialect, DataTypes, Model } from 'sequelize'; // Import Model
+import { Sequelize, Dialect } from 'sequelize'; // Removed DataTypes, Model as they are not directly used for types here
 import dotenv from 'dotenv';
 import { dialectModules } from './sequelize-dialects';
 
@@ -11,7 +11,7 @@ import POLicenseJoin from './models/poLicenseJoin';
 import PurchaseOrder from './models/purchaseOrder';
 import Server from './models/server';
 import User from './models/user';
-import LicenseAudit from './models/licenseAudit'; // Added import
+import LicenseAudit from './models/licenseAudit';
 
 dotenv.config({ path: '.env.local' });
 
@@ -29,19 +29,25 @@ interface Db {
   Administrator: typeof Administrator;
   Customer: typeof Customer;
   License: typeof License;
-  LicenseStatusLookup: typeof LicenseStatusLookup; // Added to interface
+  LicenseStatusLookup: typeof LicenseStatusLookup;
   LicenseTypeLookup: typeof LicenseTypeLookup;
   POLicenseJoin: typeof POLicenseJoin;
   PurchaseOrder: typeof PurchaseOrder;
   Server: typeof Server;
   User: typeof User;
-  LicenseAudit: typeof LicenseAudit; // Added to interface
+  LicenseAudit: typeof LicenseAudit;
 }
 
-let cachedDb: Db | null = null;
+// Extend the NodeJS.Global interface or use globalThis for better type safety
+declare global {
+  // eslint-disable-next-line no-var
+  var __dbInstance: Db | undefined;
+}
+
+// let cachedDb: Db | null = null; // We will use global.__dbInstance instead
 
 function initializeDb(): Db {
-  console.log('Initializing DB connection and models...'); // Add log for debugging
+  console.log('Attempting to initialize DB connection and models...');
 
   if (!dbName || !dbUser || !dbHost || dbPassword === undefined) {
     console.error('Database configuration environment variables are missing! Check your .env.local file.');
@@ -53,25 +59,20 @@ function initializeDb(): Db {
     port: dbPort,
     dialect: dbDialect,
     dialectModule: dialectModules[dbDialect as keyof typeof dialectModules],
-    logging: process.env.NODE_ENV === 'development' ? console.log : false, // Consider disabling logging during build
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    pool: { // Explicitly define pool options
+      max: 5, // Max number of connections in pool
+      min: 0, // Min number of connections in pool
+      acquire: 30000, // Max time (ms) that pool will try to get connection before throwing error
+      idle: 10000 // Max time (ms) that a connection can be idle before being released
+    },
     dialectOptions: dbSslMode ? {
       ssl: {
         require: dbSslMode === 'require',
-        rejectUnauthorized: false // Adjust as needed for your SSL setup
+        rejectUnauthorized: false
       }
     } : undefined,
   });
-
-  Administrator.initialize(sequelizeConnection);
-  Customer.initialize(sequelizeConnection);
-  LicenseTypeLookup.initialize(sequelizeConnection);
-  LicenseStatusLookup.initialize(sequelizeConnection); // Added initialization
-  License.initialize(sequelizeConnection);
-  Server.initialize(sequelizeConnection);
-  PurchaseOrder.initialize(sequelizeConnection);
-  POLicenseJoin.initialize(sequelizeConnection);
-  User.initialize(sequelizeConnection);
-  LicenseAudit.initialize(sequelizeConnection); // Added initialization
 
   const models = {
     Administrator,
@@ -86,34 +87,39 @@ function initializeDb(): Db {
     LicenseAudit
   };
 
+  // Initialize all models
   Object.values(models).forEach(model => {
-    if (model.associate) {
+    // All model files currently have an initialize static method
+    model.initialize(sequelizeConnection);
+  });
+
+  // Associate all models
+  Object.values(models).forEach(model => {
+    if (model.associate) { // Check if associate method exists
       model.associate(models);
     }
   });
 
-  const dbInstance: Db = {
+  console.log('DB connection and models initialized successfully.');
+  return {
     sequelize: sequelizeConnection,
     Sequelize,
-    Administrator,
-    Customer,
-    License,
-    LicenseStatusLookup, // Added to instance
-    LicenseTypeLookup,
-    POLicenseJoin,
-    PurchaseOrder,
-    Server,
-    User,
-    LicenseAudit, // Added to instance
+    ...models
   };
-  return dbInstance;
 }
 
 export function getDbInstance(): Db {
-  if (!cachedDb) {
-    cachedDb = initializeDb();
+  // In development, HMR can cause modules to be re-evaluated.
+  // Using a global variable helps persist the instance across HMR updates.
+  // In production serverless environments, this helps ensure that a single warm instance
+  // reuses the connection.
+  if (!global.__dbInstance) {
+    console.log("Global DB instance not found. Initializing and caching globally.");
+    global.__dbInstance = initializeDb();
+  } else {
+    console.log("Found existing global DB instance.");
   }
-  return cachedDb;
+  return global.__dbInstance;
 }
 
 export async function testDbConnection() {
@@ -126,4 +132,4 @@ export async function testDbConnection() {
   }
 }
 
-export { Administrator, Customer, License, /*LicenseActionLookup, LicenseLedger,*/ LicenseStatusLookup, LicenseTypeLookup, POLicenseJoin, PurchaseOrder, Server, User, LicenseAudit }; // Added LicenseStatusLookup and LicenseAudit
+export { Administrator, Customer, License, LicenseStatusLookup, LicenseTypeLookup, POLicenseJoin, PurchaseOrder, Server, User, LicenseAudit };

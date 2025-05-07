@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDbInstance } from '@/lib/db'; // Use the lazy initialization function
 import { PurchaseOrderInput } from '@/lib/models/purchaseOrder'; // Import input type
-import Customer from '@/lib/models/customer'; // Import Customer for association include & validation
 
 interface RouteParams {
   params: {
@@ -20,7 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const purchaseOrder = await db.PurchaseOrder.findByPk(poId, {
-        include: [{ model: Customer, as: 'customer' }] // Include associated customer
+        include: [{ model: db.Customer, as: 'customer' }] // Include associated customer
     });
 
     if (!purchaseOrder) {
@@ -66,7 +65,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
         await purchaseOrder.update(updateData);
         const result = await db.PurchaseOrder.findByPk(poId, {
-             include: [{ model: Customer, as: 'customer' }]
+             include: [{ model: db.Customer, as: 'customer' }]
         });
         return NextResponse.json(result);
 

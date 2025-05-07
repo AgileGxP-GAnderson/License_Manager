@@ -1,20 +1,13 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDbInstance } from '@/lib/db';
 import { PurchaseOrderInput } from '@/lib/models/purchaseOrder';
-import License from '@/lib/models/license';
-import Customer from '@/lib/models/customer';
-import PurchaseOrder from '@/lib/models/purchaseOrder';
 import { WhereOptions, Sequelize } from 'sequelize';
-import Server from '@/lib/models/server';
-import LicenseTypeLookup from '@/lib/models/licenseTypeLookup'; // Import LicenseTypeLookup
-import LicenseStatusLookup from '@/lib/models/licenseStatusLookup'; // +++ Import LicenseStatusLookup
-import POLicenseJoin from '@/lib/models/poLicenseJoin'; // Import the join model
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const customerIdStr = searchParams.get('customerId');
   let customerId: number | null = null;
-  const whereClause: WhereOptions<PurchaseOrder> = {};
+  const whereClause: WhereOptions<any> = {}; // Changed PurchaseOrder to any for broader compatibility with dbInstance.PurchaseOrder
   console.log('[API_PURCHASE_ORDERS_GET] customerId:', customerIdStr);
 
   if (customerIdStr) {
@@ -28,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const dbInstance = getDbInstance();
-    const sequelize = dbInstance.sequelize;
+    // const sequelize = dbInstance.sequelize; // sequelize variable not used directly, can be removed if not needed elsewhere
 
     const purchaseOrdersData = await dbInstance.PurchaseOrder.findAll({
       where: whereClause,
@@ -41,41 +34,41 @@ export async function GET(request: NextRequest) {
       ],
       include: [
         {
-          model: Customer, // Include customer details if needed
+          model: dbInstance.Customer, // Use dbInstance.Customer
           as: 'customer',
-          attributes: ['id', 'businessName'] // Only select necessary fields
+          attributes: ['id', 'businessName']
         },
         {
-          model: License,
+          model: dbInstance.License, // Use dbInstance.License
           as: 'licenses',
           attributes: [
             'id',
             'uniqueId',
             'externalName',
             'typeId',
-            'licenseStatusId', // +++ Added licenseStatusId
+            'licenseStatusId',
           ],
           through: {
-            model: POLicenseJoin, // Specify the join model
-            as: 'poLicenseJoin', // Use the alias defined in associations
-            attributes: ['duration'] // Fetch duration directly from join table
+            model: dbInstance.POLicenseJoin, // Use dbInstance.POLicenseJoin
+            as: 'poLicenseJoin',
+            attributes: ['duration']
           },
-          required: false, // Use LEFT JOIN
+          required: false,
           include: [
             {
-              model: LicenseTypeLookup, // Include License Type
+              model: dbInstance.LicenseTypeLookup, // Use dbInstance.LicenseTypeLookup
               as: 'type',
               attributes: ['id', 'name'],
               required: false,
             },
             {
-              model: LicenseStatusLookup, // +++ Include LicenseStatusLookup
-              as: 'licenseStatus',       // +++ Alias for the association
-              attributes: ['name'],      // +++ Fetch 'name' again
+              model: dbInstance.LicenseStatusLookup, // Use dbInstance.LicenseStatusLookup
+              as: 'licenseStatus',
+              attributes: ['name'],
               required: false,
             },
             {
-              model: Server,
+              model: dbInstance.Server, // Use dbInstance.Server
               as: 'server',
               attributes: ['id', 'name'],
               required: false
@@ -146,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     const newPurchaseOrder = await db.PurchaseOrder.create(processedBody);
     const result = await db.PurchaseOrder.findByPk(newPurchaseOrder.id, {
-      include: [{ model: Customer, as: 'customer' }]
+      include: [{ model: db.Customer, as: 'customer' }]
     });
     return NextResponse.json(result, { status: 201 }); // 201 Created
 

@@ -1,13 +1,13 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDbInstance } from '@/lib/db'; // Use the lazy initialization function
 import { LicenseInput } from '@/lib/models/license'; // Import input type
-import LicenseTypeLookup from '@/lib/models/licenseTypeLookup'; // Import for validation
+// import LicenseTypeLookup from '@//lib/models/licenseTypeLookup'; // Remove direct import
 
 export async function GET(request: NextRequest) {
   const db = getDbInstance(); // Get DB instance inside the handler
   try {
     const licenses = await db.License.findAll({
-        include: [{ model: LicenseTypeLookup, as: 'type' }] // Include associated type
+        include: [{ model: db.LicenseTypeLookup, as: 'type' }] // Include associated type
     });
     return NextResponse.json(licenses);
   } catch (error) {
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
         const newLicense = await db.License.create(body);
         const result = await db.License.findByPk(newLicense.id, {
-             include: [{ model: LicenseTypeLookup, as: 'type' }]
+             include: [{ model: db.LicenseTypeLookup, as: 'type' }] // Include associated type
         });
         return NextResponse.json(result, { status: 201 });
 

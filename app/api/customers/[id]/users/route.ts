@@ -1,7 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDbInstance } from '@/lib/db';
-import Customer from '@/lib/models/customer'; // Import Customer model for validation
-import User from '@/lib/models/user'; // Import User model
 
 interface RouteParams {
   params: {

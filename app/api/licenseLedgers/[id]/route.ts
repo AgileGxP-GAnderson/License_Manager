@@ -1,9 +1,9 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDbInstance } from '@/lib/db'; // Use the lazy initialization function
 import { LicenseLedgerInput } from '@/lib/models/licenseLedger'; // Import input type
-import License from '@/lib/models/license'; // Import for association include & validation
-import Server from '@/lib/models/server'; // Import for association include & validation
-import LicenseActionLookup from '@/lib/models/licenseActionLookup'; // Import for association include & validation
+// import License from '@/lib/models/license'; // Remove direct import
+// import Server from '@/lib/models/server'; // Remove direct import
+// import LicenseActionLookup from '@/lib/models/licenseActionLookup'; // Remove direct import
 
 interface RouteParams {
   params: {
@@ -23,9 +23,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const ledgerEntry = await db.LicenseLedger.findByPk(ledgerId, {
          include: [
-            { model: License, as: 'license' },
-            { model: Server, as: 'server' },
-            { model: LicenseActionLookup, as: 'licenseAction' }
+            { model: db.License, as: 'license' }, // Changed to db.License
+            { model: db.Server, as: 'server' }, // Changed to db.Server
+            { model: db.LicenseActionLookup, as: 'licenseAction' } // Changed to db.LicenseActionLookup
         ]
     });
 
@@ -80,9 +80,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         await ledgerEntry.update(updateData);
         const result = await db.LicenseLedger.findByPk(ledgerId, {
              include: [
-                { model: License, as: 'license' },
-                { model: Server, as: 'server' },
-                { model: LicenseActionLookup, as: 'licenseAction' }
+                { model: db.License, as: 'license' }, // Changed to db.License
+                { model: db.Server, as: 'server' }, // Changed to db.Server
+                { model: db.LicenseActionLookup, as: 'licenseAction' } // Changed to db.LicenseActionLookup
             ]
         });
         return NextResponse.json(result);

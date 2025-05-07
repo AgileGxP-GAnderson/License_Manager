@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDbInstance } from '@/lib/db'; // Use the lazy initialization function
 import { LicenseInput } from '@/lib/models/license'; // Import input type
-import LicenseTypeLookup from '@/lib/models/licenseTypeLookup'; // Import for validation
 
 interface RouteParams {
   params: {
@@ -20,7 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const license = await db.License.findByPk(licenseId, {
-        include: [{ model: LicenseTypeLookup, as: 'type' }] // Include associated type
+        include: [{ model: db.LicenseTypeLookup, as: 'type' }] // Include associated type
     });
 
     if (!license) {
@@ -66,7 +65,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
         await license.update(updateData);
         const result = await db.License.findByPk(licenseId, {
-             include: [{ model: LicenseTypeLookup, as: 'type' }]
+             include: [{ model: db.LicenseTypeLookup, as: 'type' }]
         });
         return NextResponse.json(result);
 
