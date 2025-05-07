@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         }
 
         const formattedRecords = auditRecords.map((record: any) => ({
-            id: record.id,
+            id: record.auditId, // Changed from record.id to record.auditId
             licenseIdRef: record.licenseIdRef,
             uniqueId: record.uniqueId,
             externalName: record.externalName,

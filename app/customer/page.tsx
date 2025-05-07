@@ -158,7 +158,7 @@ export default function CustomerPortal() {
   }
 
   // --- Server Registration ---
-  const handleServerRegistration = async (name: string, fingerprint: string) => {
+  const handleServerRegistration = async (name: string, fingerprint: string, description?: string) => { // Add description parameter
     if (customer?.id) {
       const customerIdNum = parseInt(customer.id, 10); // Convert string ID to number
 
@@ -175,6 +175,7 @@ export default function CustomerPortal() {
           customerId: customerIdNum, // Pass customer ID (now number)
           name,
           fingerprint,
+          description, // Pass description
           isActive: true
         }
       );
@@ -401,29 +402,31 @@ export default function CustomerPortal() {
               ) : (
                 <Table>
                   <TableHeader className="bg-brand-purple/5">
-                    {/* ... TableHead ... */}
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Server Fingerprint</TableHead>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {/* Use customerServers */}
                     {customerServers.map((server) => (
                       <TableRow key={server.id} className="hover:bg-brand-purple/5">
-                         <TableCell className="font-medium">
+                        <TableCell className="font-medium">
                           <div className="flex items-center">
                             <Server className="h-4 w-4 mr-2 text-brand-purple" />
                             {server.name}
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center">
-                            {server.description || "-"}
-                          </div>
+                        <TableCell>
+                          {server.description || "N/A"}
                         </TableCell>
-                        <TableCell className="font-medium">
-                          <div>
-                            {server.fingerprint}
-                          </div>
+                        <TableCell className="font-mono text-xs">
+                          {server.fingerprint ? 
+                            (typeof server.fingerprint === 'string' ? server.fingerprint : Buffer.from(server.fingerprint as any).toString('hex')) 
+                            : 'N/A'}
                         </TableCell>
-                        </TableRow>
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>

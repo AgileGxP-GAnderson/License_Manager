@@ -23,8 +23,12 @@ export async function GET(request: NextRequest) {
 
     const safeServers = servers.map(server => {
         const serverData = server.get({ plain: true });
-        const { fingerprint, ...rest } = serverData;
-        return rest;
+        // Convert fingerprint Buffer to hex string for client-side consumption
+        const fingerprintHex = serverData.fingerprint ? Buffer.from(serverData.fingerprint).toString('hex') : null;
+        return {
+            ...serverData,
+            fingerprint: fingerprintHex,
+        };
     });
 
     return NextResponse.json(safeServers);
@@ -61,7 +65,7 @@ export async function POST(request: NextRequest) {
             return new NextResponse(`Invalid format for fingerprint: ${e.message}`, { status: 400 });
         }
 
-        const newServer = await db.Server.create({
+        const newServerModel = await db.Server.create({
             customerId,
             name,
             fingerprint: actualFingerprintBuffer,
@@ -69,8 +73,16 @@ export async function POST(request: NextRequest) {
             description: description ?? null, // Handle optional description
         });
 
-        const { fingerprint: _, ...safeNewServer } = newServer.get({ plain: true });
-        return NextResponse.json(safeNewServer, { status: 201 }); // 201 Created
+        const newServerData = newServerModel.get({ plain: true });
+        // Convert fingerprint Buffer to hex string for client-side consumption
+        const fingerprintHex = newServerData.fingerprint ? Buffer.from(newServerData.fingerprint).toString('hex') : null;
+        
+        const responseServer = {
+            ...newServerData,
+            fingerprint: fingerprintHex,
+        };
+
+        return NextResponse.json(responseServer, { status: 201 }); // 201 Created
 
     } catch (error: any) {
         console.error('[API_SERVERS_POST]', error);
